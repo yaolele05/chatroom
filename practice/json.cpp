@@ -14,7 +14,8 @@ int main()
     return 0;
 }
 */
-using json=nlohmann::json;
+
+/*
 int main()
 {
     json j;
@@ -23,4 +24,30 @@ int main()
     j["password"]=123456;
     std::cout<<j.dump(4)<<std::endl;
     return 0;
+}
+*/
+
+using json=nlohmann::json;
+int main()
+{
+    std::string str=R"({
+    "id":1001,
+    "name":"lele",
+    "age":18,
+    "score":99.5,
+    "online":true
+    })";
+    json j=json::parse(str);
+    int id=j["id"];
+    std::string name=j["name"];
+    int age=j["age"];
+    double score=j["score"];
+    bool online=j["online"];
+    std::cout<<"id:"<<id<<std::endl;
+    std::cout<<"name:"<<name<<std::endl;
+    std::cout<<"age:"<<age<<std::endl;
+    std::cout<<"score:"<<score<<std::endl;
+    std::cout<<"online:"<<online<<std::endl;
+    return 0;
+
 }
