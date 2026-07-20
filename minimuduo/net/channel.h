@@ -47,6 +47,10 @@ public:
     {
         return inEpoll_;
     }
+    bool isNoneEvent() const
+    {
+        return events_ == 0;
+    }
 
     void setInEpoll(bool flag)
     {
@@ -57,9 +61,12 @@ public:
     void enableReading();
     void enableWriting();
 
+    void disableReading();
     void disableWriting();
     void disableAll();
+    void remove();
 
+     
 private:
     EventLoop* loop_;
 
