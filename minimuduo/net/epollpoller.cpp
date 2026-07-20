@@ -1,52 +1,78 @@
 #include "epollpoller.h"
 #include "channel.h"
+#include <unistd.h> 
 
-#include <sys/epoll.h>
-#include <unistd.h>
-#include <cstring>
-EpollPoller::EpollPoller():epfd(::epoll_create1(EPOLL_CLOEXEC)),Events(1024){}
-EpollPoller::~EpollPOller()
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+EpollPoller::EpollPoller():epfd_(::epoll_create1(EPOLL_CLOEXEC)),events_(1024)
 {
-    ::close(epfd);
-}
-void EpollPoller::updateChannel(Channel*ch)
-{
-    epoll_event ev;
-    std::memset(&ev,0,sizeof(ev));
-     ev.data.ptr=ch;
-     ev.events=ch->events();
-     int fd=ch->fd();
-     if(!ch->inEPOLL())
-     {
-        ::epoll_ctl(epfd,EPOLL_CTL_ADD,fd,&ev);
-        ch->setINEPOLL(true);
-     }
-     else
-     {
-        ::epoll_ctl(epfd,EPOLL_CTL_MOD,fd,&ev);
-     }
-}
-void EpollPOller::removeChannel(Channel* ch)
-{
-    int fd=ch->fd();
-    ::epoll_ctl(epfd,EPOLL_CTL_DEL,fd,&ev);
-    ch->setINPOLL(false);
-}
-void EpollPoller::poll(int timeoutms,std::vector<Channel*>& activeChannels)
-{
-    int n=::epoll_wait(epfd,Events.data(),static_cast<int>(Events.size()),timeoutms);
-    if(n>0)
+    if(epfd_<0)
     {
-        fillactiveChannels(n,activeChannels);
+        perror("epoll_create1");
+        exit(EXIT_FAILURE);
     }
 }
-void EpollPller::fillactiveChannels(int numevents,std::vector<Channel*>&activeChannels)
+EpollPoller::~EpollPoller()
 {
-    for(int i=0;i<numevents;i++)
+    
+        ::close(epfd_);
+    
+}
+void EpollPoller::poll(int timeoutMs, ChannelList& activeChannels)
+{
+    int numEvents=::epoll_wait(epfd_,events_.data(),static_cast<int>(events_.size()),timeoutMs);
+    if(numEvents<0)
     {
-        auto* ch=static_cast<Channel*>(Event[i].data.ptr);
-        ch->setRevents(Events[i].events);
-
-        activeChannels.push_back(ch);
+        if(errno!=EINTR)
+        {
+            return;
+        }
+        perror("epoll_wait");
+       return;
     }
+    fillActiveChannels(numEvents,activeChannels);
+}
+void EpollPoller::fillActiveChannels(int numEvents,ChannelList& activeChannels)
+{
+    for(int i=0;i<numEvents;i++)
+    {
+        Channel*channel=static_cast<Channel*>(events_[i].data.ptr);
+        channel->setRevents(events_[i].events);
+        activeChannels.push_back(channel);
+    }
+}
+void EpollPoller::updateChannel(Channel* channel)
+{
+    struct epoll_event ev{};
+    ev.events=channel->events();
+    ev.data.ptr=channel;
+    int fd=channel->fd();
+    if(!channel->inEpoll())
+    {
+        if(::epoll_ctl(epfd_,EPOLL_CTL_ADD,fd,&ev)<0)
+        {
+            perror("epoll_ctl add");
+           return;
+        }
+        channel->setInEpoll(true);
+    }
+    else
+    {
+        if(::epoll_ctl(epfd_,EPOLL_CTL_MOD,fd,&ev)<0)////
+        {
+            perror("epoll_ctl mod");
+            return;
+        }
+    }
+}
+void EpollPoller::removeChannel(Channel* channel)
+{
+    int fd=channel->fd();
+    if(::epoll_ctl(epfd_,EPOLL_CTL_DEL,fd,nullptr)<0)
+    {
+        perror("epoll_ctl del");
+        return;
+    }
+    channel->setInEpoll(false);
 }
