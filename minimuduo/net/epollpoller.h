@@ -15,15 +15,13 @@ public:
     EpollPoller(const EpollPoller&) = delete;
     EpollPoller& operator=(const EpollPoller&) = delete;
 
-    void poll(int timeoutMs,
-              std::vector<Channel*>& activeChannels) override;
+    void poll(int timeoutMs, std::vector<Channel*>& activeChannels) override;
 
     void updateChannel(Channel* channel) override;
     void removeChannel(Channel* channel) override;
 
 private:
-    void fillActiveChannels(int numEvents,
-                            std::vector<Channel*>& activeChannels);
+    void fillActiveChannels(int numEvents, ChannelList& activeChannels);
 
 private:
     int epfd_;   
