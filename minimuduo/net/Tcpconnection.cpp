@@ -92,14 +92,45 @@ void TcpConnection::handleError()
 }
 void TcpConnection::send(const std::string& msg)
 {
-  loop_->runInLoop([this,msg](){
-    sendInLoop(msg);
-  });
+    if(loop_->isInLoopThread())
+    {
+        sendInLoop(msg);
+    }
+    else
+    {
+        auto self(shared_from_this());
+
+        loop_->queueInLoop([self,msg](){
+            self->sendInLoop(msg);
+        });
+    }
 }
 void TcpConnection::sendInLoop(const std::string&msg)
 {
-    outputBuffer_->append(msg);
+   if(state_==kDisconnected)
+   {
+    return;
+   }
+   ssize_t nwrote =0;
+   if(!(channel_.events()& EPOLLOUT) && outputBuffer_->readableBytes()=0)
+   {
+    nwrote=::write(channel_.fd(),msg.data(),msg.size());
+
+    if(nwrote<0)
+    {
+        if(errno!= EWOULDBLOCK)
+        {
+        perror("write");
+        }
+        nwrote=0;
+    }
+   }
+   if(static_cast<size_t>(nwrote))
+   {
+    outputBuffer_->append(msg.data()+nwrote,msg.size()-nwrote);
     channel_.enableWriting();
+   }
+
 }
 void TcpConnection::shutdown()
 {
