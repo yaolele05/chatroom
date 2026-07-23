@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-EpollPoller::EpollPoller():epfd_(::epoll_create1(EPOLL_CLOEXEC)),events_(1024)
+EpollPoller::EpollPoller():epfd_(::epoll_create1(EPOLL_CLOEXEC)),events_(16)
 {
     if(epfd_<0)
     {
@@ -24,7 +24,7 @@ void EpollPoller::poll(int timeoutMs, ChannelList& activeChannels)
     int numEvents=::epoll_wait(epfd_,events_.data(),static_cast<int>(events_.size()),timeoutMs);
     if(numEvents<0)
     {
-        if(errno!=EINTR)
+        if(errno==EINTR)
         {
             return;
         }
@@ -32,6 +32,11 @@ void EpollPoller::poll(int timeoutMs, ChannelList& activeChannels)
        return;
     }
     fillActiveChannels(numEvents,activeChannels);
+
+    if(numEvents==static_cast<int>(events_.size()))
+    {
+        events_.resize(events_.size()*2);
+    }
 }
 void EpollPoller::fillActiveChannels(int numEvents,ChannelList& activeChannels)
 {
@@ -48,7 +53,7 @@ void EpollPoller::updateChannel(Channel* channel)
     ev.events=channel->events();
     ev.data.ptr=channel;
     int fd=channel->fd();
-    if(!channel->inEpoll())
+    if(channel->index()==-1)
     {
         if(::epoll_ctl(epfd_,EPOLL_CTL_ADD,fd,&ev)<0)
         {
@@ -56,13 +61,27 @@ void EpollPoller::updateChannel(Channel* channel)
            return;
         }
         channel->setInEpoll(true);
+        channel->setIndex(1);
     }
     else
     {
-        if(::epoll_ctl(epfd_,EPOLL_CTL_MOD,fd,&ev)<0)////
+        if(channel->isNoneEvent())
         {
-            perror("epoll_ctl mod");
-            return;
+            if(::epoll_ctl(epfd_,EPOLL_CTL_DEL,fd,nullptr)<0)
+            {
+                perror("epoll_ctl del");
+                return;
+            }
+            channel->setInEpoll(false);
+            channel->setIndex(-1);
+        }
+        else
+        {
+            if(::epoll_ctl(epfd_,EPOLL_CTL_MOD,fd,&ev))
+            {
+                perror("epoll_ctl mod");
+                return;
+            }
         }
     }
 }
@@ -75,4 +94,5 @@ void EpollPoller::removeChannel(Channel* channel)
         return;
     }
     channel->setInEpoll(false);
+    channel->setIndex(-1);
 }

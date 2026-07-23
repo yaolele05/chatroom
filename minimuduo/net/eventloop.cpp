@@ -6,6 +6,8 @@
 #include <atomic>
 #include <sys/eventfd.h>
 #include <cstdio>
+#include <thread>
+
 static int createEventfd()
 {
     int fd=eventfd(0,EFD_NONBLOCK | EFD_CLOEXEC);
@@ -19,7 +21,7 @@ static int createEventfd()
 EventLoop::EventLoop():looping_(false),wakeupfd_(createEventfd()),quit_(false),callingPendingFunctors_(false),threadId_(std::this_thread::get_id()),poller_(new EpollPoller()),wakeupChannel_(new Channel(this,wakeupfd_)){
 
 
-    wakeupChannel_->setReadCallback(std::bind(&EventLoop::handleRead,this));
+    wakeupChannel_->ReadCallback(std::bind(&EventLoop::handleRead,this));
     wakeupChannel_->enableReading();
 }
 EventLoop::~EventLoop()
@@ -45,7 +47,11 @@ void EventLoop::loop()
 void EventLoop::quit()
 {
     
-    std::atomic<bool>quit_;
+   quit_=true;
+   if(!isInLoopThread())
+   {
+    wakeup();
+   }
 }
 
 void EventLoop::updateChannel(Channel* channel)
@@ -109,6 +115,8 @@ void EventLoop::handleRead()
 void EventLoop::doPendingFunctors()
 {
     std::vector<Functor>functors;
+
+    callingPendingFunctors_=true;
     {
         std::lock_guard<std::mutex> lock(mutex_);
         functors.swap(pendingFunctors_);
@@ -119,3 +127,7 @@ void EventLoop::doPendingFunctors()
         functor();
     }
 }
+std::thread::id EventLoop::threadId() const
+{
+    return threadId_;
+} 

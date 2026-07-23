@@ -4,7 +4,7 @@
 #include <mutex>
 #include <thread>
 #include <functional>
-
+#include <atomic>
 #include "poller.h"
 class Channel;
 class Poller;
@@ -21,7 +21,7 @@ class EventLoop
     void quit();
 
     bool callingPendingFunctors_;
-    
+
     void updateChannel(Channel* channel);
     void removeChannel(Channel*channel);
     
@@ -29,13 +29,15 @@ class EventLoop
        
     void runInLoop(Functor cb);
     void queueInLoop(Functor cb);
-  
+   
+    std::thread::id threadId() const;
+
 
     private:
 
     bool looping_;
     int wakeupfd_;
-    bool quit_;
+    std::atomic<bool> quit_;
     std::unique_ptr<Channel>wakeupChannel_;
 
     std::thread::id threadId_;

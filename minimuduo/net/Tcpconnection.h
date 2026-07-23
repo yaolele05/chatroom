@@ -1,5 +1,5 @@
 #pragma once
-
+#include "callback.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -14,7 +14,7 @@ class TcpConnection:
 public std::enable_shared_from_this<TcpConnection>
 {
     public:
-    using TcpConnectionPtr=std::shared_ptr<TcpConnection>;
+
     enum State
     {
         kConnecting,
@@ -23,22 +23,30 @@ public std::enable_shared_from_this<TcpConnection>
         kDisconnecting,
         kDisconnected
     };
-    using TcpConnectionCallback=std::function<void(const TcpConnectionPtr&)>;
-    using MessageCallback=std::function<void(const TcpConnectionPtr&,Buffer* buffer)>;
-    using CloseCallback=std::function<void(const TcpConnectionPtr&)>;
-    using WritecomCallback=std::function<void(const TcpConnectionPtr&)>;
-    TcpConnection(EventLoop* loop,int sockfd,const InetAddress& localaddr,const InetAddress& peeraddr);
+ 
+
+    TcpConnection(EventLoop* loop,const std::string& name, int sockfd,const InetAddress& localaddr,const InetAddress& peeraddr);
     ~TcpConnection();
     void send(const std::string& message);
     void sendInLoop(const std::string&msg);
     void shutdown();
+
     void connEstablished();
     void connDestroyed();
-    void setTcpConnectionCallback(const TcpConnectionCallback& cb);
-    void setMessageCallback(const MessageCallback& cb);
-    void setCloseCallback(const CloseCallback& cb);
 
+    void setTcpConnectionCallback( const Connectioncallback& cb);
+    void setMessageCallback(const Messagecallback& cb);
+    void setCloseCallback(const  Closecallback& cb);
+    void setWritecomCallback(const  Writecomcallback& cb);
 
+    void forceClose();
+    bool connected()const;
+    bool disconnected() const;
+
+    EventLoop* getLoop() const;
+    const std::string& name() const;
+    const InetAddress& localaddress()const;
+    const InetAddress& peeraddress() const;
 
     private:
     void handleRead();
@@ -47,18 +55,19 @@ public std::enable_shared_from_this<TcpConnection>
     void handleError();
 
     EventLoop* loop_;
+    std::string name_;
     Socket socket_;
     Channel channel_;
-   InetAddress peerAddr_;
-   InetAddress localAddr_;
+    InetAddress peerAddr_;
+    InetAddress localAddr_;
     State state_;
     std::unique_ptr<Buffer>inputBuffer_;
     std::unique_ptr<Buffer>outputBuffer_;
 
-    TcpConnectionCallback connectionCallback_;
-    MessageCallback messageCallback_;
-    CloseCallback closeCallback_;
-    WritecomCallback  writecomCallback_;
+    Connectioncallback connectionCallback_;
+    Messagecallback messageCallback_;
+    Closecallback closeCallback_;
+    Writecomcallback  writecomCallback_;
 
-
+    
 };
