@@ -4,6 +4,7 @@
 #include <string_view>
 #include <memory>
 #include "mysqlresult.h"
+#include "mysqlstatement.h"
 class MysqlClient
 {
     public:
@@ -20,18 +21,21 @@ class MysqlClient
     bool connected() const;
     void disconnect();
    
+    bool execute(std::string_view sql);
 
-    bool execute(std::string_view sql);///
-    std::shared_ptr<MysqlResult> query(std::string_view sql);
+    std::unique_ptr<MysqlStatement> prepare(std::string_view sql);
+  
     bool beginTransaction();
     bool commit();
     bool rollback();
-    
+    uint64_t lastInsertId() const;
     
     std::string error() const;
+    bool ping();
 
     private:
     MYSQL* mysql_{nullptr};
-
+    
+      friend class MysqlStatement;
 
 };
