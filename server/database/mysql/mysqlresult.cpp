@@ -1,47 +1,160 @@
 #include "mysqlresult.h"
-#include "mysqlresult.h"
+#include<cstring>
 
-
-MysqlResult::MysqlResult(MYSQL_RES* res):result_(res)
+MysqlResult::MysqlResult(MYSQL_STMT* stmt):stmt_(stmt)
 {
 
+    if(!stmt_)
+    return;
+
+    metadata_=mysql_stmt_result_metadata(stmt_);
+
+    if(!metadata_)
+    return;
+
+    bindResult();
+    if (mysql_stmt_store_result(stmt_) != 0)
+  {
+    throw std::runtime_error(mysql_stmt_error(stmt_));
+   }
 }
 MysqlResult::~MysqlResult()
 {
-    if(result_)
+    if(metadata_)
     {
-        mysql_free_result(result_);
-
-        result_=nullptr;
+        mysql_free_result(metadata_);
     }
 }
-MYSQL_ROW MysqlResult::fetchRow()
+void MysqlResult::bindResult()
 {
-    if(result_==nullptr)
-        return nullptr;
+   if(!metadata_)
+   {
+    return;
+   }
+   const unsigned int fieldCount=mysql_num_fields(metadata_);
+   MYSQL_FIELD* fields=mysql_fetch_fields(metadata_);
+  
 
-    return mysql_fetch_row(result_);
+  binds_.assign(fieldCount, MYSQL_BIND{});
+
+   lengths_.resize(fieldCount);
+   nullFlags_.resize(fieldCount);
+   types_.resize(fieldCount);
+   buffers_.resize(fieldCount);
+  for(unsigned int i=0;i<fieldCount;++i)
+  {
+    types_[i]=fields[i].type;
+    MYSQL_BIND& bind=binds_[i];
+  
+
+  switch(fields[i].type)
+  {
+    case MYSQL_TYPE_TINY:
+    buffers_[i].resize(sizeof(int8_t));
+    break;
+
+    case MYSQL_TYPE_SHORT:
+    buffers_[i].resize(sizeof(int16_t));
+    break;
+
+    case MYSQL_TYPE_LONG:
+    buffers_[i].resize(sizeof(int32_t));
+    break;
+  
+    case MYSQL_TYPE_LONGLONG:
+    buffers_[i].resize(sizeof(int64_t));
+    break;
+
+    case MYSQL_TYPE_FLOAT:
+    buffers_[i].resize(sizeof(float));
+    break;
+
+    case MYSQL_TYPE_DOUBLE:
+    buffers_[i].resize(sizeof(double));
+    break;
+
+    case MYSQL_TYPE_DATETIME:
+    case MYSQL_TYPE_DATE:
+    case MYSQL_TYPE_TIME:
+    case MYSQL_TYPE_TIMESTAMP:
+    buffers_[i].resize(sizeof(MYSQL_TIME));
+    break;
+
+    case MYSQL_TYPE_STRING:
+    case MYSQL_TYPE_VAR_STRING:
+    case MYSQL_TYPE_VARCHAR:
+    case MYSQL_TYPE_BLOB:
+    buffers_[i].resize(std::min(fields[i].length+1,kMaxBuffer));
+    break;
+
+    default:
+    buffers_[i].resize(std::min(fields[i].length+1,kMaxBuffer));
+    break;
+
+  }
+  bind.buffer_type = fields[i].type;
+
+  bind.buffer = buffers_[i].data();
+
+  bind.buffer_length =static_cast<unsigned long>(buffers_[i].size());
+
+  bind.length = &lengths_[i];
+  bind.is_null = reinterpret_cast<bool*>(&nullFlags_[i]);
+
+  bind.is_unsigned = (fields[i].flags & UNSIGNED_FLAG) != 0;
+
+ }
+   if (mysql_stmt_bind_result(stmt_, binds_.data()) != 0)
+   {
+    throw std::runtime_error(mysql_stmt_error(stmt_));
+    }
 }
-bool MysqlResult::valid() const
+bool MysqlResult::fetch()
 {
-    return result_!=nullptr;
+    if (!stmt_)
+    {
+        return false;
+    }
+    int ret = mysql_stmt_fetch(stmt_);
+    if (ret == 0)
+    {
+        return true;
+    }
+    if (ret == MYSQL_NO_DATA)
+    {
+        return false;
+    }
+    throw std::runtime_error(mysql_stmt_error(stmt_));
 }
 size_t MysqlResult::rowCount() const
 {
-    if(!result_)
-    return 0;
+  if (!stmt_)
+    {
+        return 0;
+    }
 
-    return mysql_num_rows(result_);
+    return mysql_stmt_num_rows(stmt_);
 }
 size_t MysqlResult::fieldCount() const
 {
-    if(!result_)
-    return 0;
-    return mysql_num_fields(result_);
+   if(!metadata_)
+   return 0;
+   return mysql_num_fields(metadata_);
+}
+bool MysqlResult::valid() const
+{
+    return stmt_ != nullptr && metadata_ != nullptr;
 }
 bool MysqlResult::empty() const
 {
-    if(result_==nullptr)
+    return rowCount() == 0;
+}
+bool MysqlResult::isNull(int index) const
+{
+    if(index < 0 ||index >= static_cast<int>(nullFlags_.size()))
+    {
         return true;
-    return mysql_num_rows(result_)==0;
+    }
+
+    return nullFlags_[index];
 }
