@@ -43,6 +43,7 @@ public:
 
     bool saveToken(int userid, const std::string& token);
     std::optional<std::string> getToken(int userid);
+    bool deleteToken(int userid);
      
     RedisResult command(const std::string& cmd);
     RedisResult command(const char* com,...);
