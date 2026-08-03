@@ -1,20 +1,27 @@
 #pragma once
-#include <vector>
-#include <optional>
-#include "entity/group.h"
+#include <string>
+#include <chrono>
+#include <cstdint>
 #include "entity/groupmember.h"
+#include "entity/group.h"
+#include "../database/mysql/mysqlresult.h"
+#include <optional>
+#include <vector>
 
 class GroupModel
 {
     public:
-    bool createGroup(const Group& group);
-    bool removeGroup(int groupid);
-    bool updateGroup(const Group& group);
-    std::optional<Group>findGroup(int groupid);
-      std::vector<Group>queryGroups(int userid);
-   bool addMember(const GroupMember& member);
-   bool removeMember(int groupid,int userid );
-   bool updateMemberRole(int groupid,int userid,GroupRole role);
+    bool create(Group& group);
+   
+    std::optional<Group> findById(std::int64_t groupid);
+    bool addGroupMember(GroupMember& member);
+    bool removeGroupMember(std::int64_t groupid,int userid);
+    std::vector<GroupMember> findGroupMembers(std::int64_t groupid); 
+    std::vector<Group> findUserGroups(int userid);
+    bool isGroupMember(std::int64_t groupid,int userid);
+    GroupRole getGroupMemberRole(std::int64_t groupid,int userid);
+    private:
+    Group makeGroup(MysqlResult& result);
+    GroupMember makeGroupMember(MysqlResult& result);
 
-    std::vector<GroupMember>queryMembers(int groupid);
 };
