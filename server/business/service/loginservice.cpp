@@ -26,6 +26,9 @@ bool LoginService::login(const std::shared_ptr<UserSession>& session,const std::
         return false;
     }
 
+    UserModel usermodel;
+    usermodel.updateOnlineStatus(user->id(),true);
+
     auto redis=RedisPool::instance().getConnection();
     if(!redis)
     {
@@ -57,7 +60,10 @@ bool LoginService::logout(const std::shared_ptr<UserSession>& session)
     {
         return false;
     }
-    bool ok=false;
+
+    UserModel usermodel;
+    usermodel.updateOnlineStatus(session->userid(),false);
+     bool ok=false;
     auto redis=RedisPool::instance().getConnection();
     if(redis)
     {
