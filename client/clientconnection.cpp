@@ -2,6 +2,7 @@
 #include "../common/protocol/Jsoncodec.h"
 #include "../common/protocol/packetcodec.h"
 #include "../minimuduo/net/eventloop.h"
+#include<arpa/inet.h>
 #include <unistd.h>
 #include <cerrno>
 #include <iostream>
@@ -101,8 +102,10 @@ void ClientConnection::close()
 
 void ClientConnection::connectEstablished()
 {
+     std::cout<<"client connectEstablished fd="<<channel_.fd()<<std::endl;
     channel_.tie(shared_from_this());
     channel_.enableReading();
+    std::cout<<"events="<<channel_.events()<<std::endl;
 }
 
 void ClientConnection::connectDestroyed()
@@ -112,24 +115,36 @@ void ClientConnection::connectDestroyed()
 }
 void ClientConnection::handleRead()
 {
+    std::cout << "client TcpConnection handleRead"<< std::endl;
    int savedErrno=0;
     ssize_t n=inputBuffer_->readFd(channel_.fd(),&savedErrno);
+    std::cout<<"client read bytes="<<n<<std::endl;
     if(n>0)
     {
+         std::cout<<"client read bytes="<<n<<std::endl;
+         auto data=inputBuffer_->peek();
+
+        uint32_t len;
+       memcpy(&len,data,4);
+       std::cout<<"raw length="<<ntohl(len) <<std::endl;
         while(true)
         {
         std::string json;
         PacketCodec::DecodeResult result=PacketCodec::decode(*inputBuffer_,json);
+         std::cout<<"packet decode result="<<static_cast<int>(result)<<" json size="<<json.size()<<" readable="<<inputBuffer_->readableBytes()<<std::endl;
+
         switch(result)
         {
             case PacketCodec::DecodeResult::Ok:
             {
                 try
                 {
+                    std::cout<<"json:"<<json<<std::endl;
                    Message message =JsonCodec::decode(json);
+                   std::cout<<"message type="<<static_cast<int>(message.type()) <<std::endl;
                    if(messageCallback_)
                    {
-                    MessageCallback(message);
+                    messageCallback_(message);
                    }
                 }
                 catch(const std::exception& e)
@@ -158,7 +173,6 @@ void ClientConnection::handleRead()
     else if(n==0)
     {
         handleClose();
-        //可能是对端关闭连接
     }
     else
     {

@@ -98,7 +98,7 @@ std::unique_ptr<MysqlStatement> MysqlClient::prepare(std::string_view sql)
 
     return stmt;
 }
-uint64_t MysqlClient::lastInsertId() const
+int64_t MysqlClient::lastInsertId() const
 {
     if(!mysql_)
     {

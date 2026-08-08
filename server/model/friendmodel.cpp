@@ -4,9 +4,11 @@
 #include "../database/mysql/mysqlstatement.h"
 #include <cstdint>
 #include <chrono>
-
+#include<iostream>
+#include <cerrno>
 Friend FriendModel::makeFriend(MysqlResult& result)
 {
+
     Friend rela;
     rela.setId(result.get<std::int64_t>(0));
     rela.setUserId(result.get<int>(1));
@@ -19,6 +21,11 @@ Friend FriendModel::makeFriend(MysqlResult& result)
 }
 bool FriendModel::addFriend( Friend& rela)
 {
+    if(rela.userId() <= 0 || rela.friendId() <= 0)
+    {
+        std::cerr<<"invalid friend id"<<std::endl;
+        return false;
+    }
     auto conn=MysqlPool::instance().getConnection();
     if(!conn)
     {
@@ -82,7 +89,7 @@ bool FriendModel::isFriend(int userid,int friendid)
     {
         return false;
     }
-    auto stmt=conn->prepare(R"(SELECT id FROM user_friend WHERE (user_id=? AND friend_id=?) OR (user_id=? AND friend_id=?))");
+    auto stmt=conn->prepare(R"(SELECT id FROM user_friend WHERE (user_id=? AND friend_id=?) OR (user_id=? AND friend_id=?) LIMIT1)");
     if(!stmt)
     {
         MysqlPool::instance().releaseConnection(conn);
@@ -106,7 +113,7 @@ std::vector<Friend> FriendModel::findFriends(int userid)
     {
         return friends;
     }
-    auto stmt=conn->prepare(R"(SELECT id,user_id,friend_id,status,create_time From user_friend Where user_id=?)");
+    auto stmt=conn->prepare(R"(SELECT id,user_id,friend_id,status,create_time From user_friend Where user_id=? OR friend_id=?)");
     if(!stmt)
     {
         MysqlPool::instance().releaseConnection(conn);
@@ -115,10 +122,17 @@ std::vector<Friend> FriendModel::findFriends(int userid)
     }
 
     stmt->bind(0,userid);
+    stmt->bind(1,userid);
     auto result=stmt->query();
     while(result.fetch())
     {   
         auto rela=makeFriend(result);
+        if(rela.userId()!=userid)
+        {
+            int tmp=rela.userId();
+            rela.setUserId(rela.friendId());
+            rela.setFriendId(tmp);
+        }
         friends.push_back(rela);
     }
     MysqlPool::instance().releaseConnection(conn);

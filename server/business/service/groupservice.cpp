@@ -8,6 +8,7 @@
 #include "../../model/offlinemodel.h"
 #include"../../session/sessionmanager.h"
 #include "../../model/offlinemodel.h"
+#include <iostream>
 GroupService& GroupService::instance()
 {
     static GroupService service;
@@ -34,23 +35,22 @@ void GroupService::rigisterHandler()
     GroupService::instance().groupChat(message,session);
 });
 
-
+  dispatcher.registerHandler(Messagetype::GroupList,[](const Message& message,Session* session)
+{
+    GroupService::instance().groupList(message,session);
+});
 }
 void GroupService::createGroup(const Message& msg,Session*se)
 {
     if(!se)
     return;
-
     if(!se->authenticated())
     return;
-
     auto userSession=dynamic_cast<UserSession*>(se);
     if(!userSession)
     return;
 
     int userId=userSession->userid();
-
-
     auto& payload=msg.payload();
     if(!payload.contains("groupName"))
     return;
@@ -64,7 +64,6 @@ void GroupService::createGroup(const Message& msg,Session*se)
     group.setCreateTime(std::chrono::system_clock::now());
 
     GroupModel model;
-
     bool ok = model.create(group);
     if(!ok)
     return;
@@ -74,47 +73,43 @@ void GroupService::createGroup(const Message& msg,Session*se)
     member.setUserId(userId);
     member.setRole(GroupRole::Owner);
     member.setCreateTime(std::chrono::system_clock::now());
-
-     if(ok)
-     {
-       ok=model.addGroupMember(member);
-     }
-   Message reply;
+     
+    ok=model.addGroupMember(member);
+     
+     Message reply;
 
      reply.setSenderId(0);
      reply.setReceiverId(userId);
      reply.setType(Messagetype::CreateGroupResponse);
      reply.setSequence(msg.sequence());
      reply.payload()["code"] =  ok ? 0 : -1;
-     reply.payload()["groupId"] =group.id();
      reply.payload()["message"] = ok ? "success" : "failed";
-     se->send(reply);
+     
+     if(ok)
+     {
+         reply.payload()["groupId"] =group.id();
+     }
+    se->send(reply);
 
 }
 void GroupService::joinGroup(const Message& msg,Session*se)
 {
      if(!se)
     return;
-
     if(!se->authenticated())
     return;
-    
 
     auto userSession = dynamic_cast<UserSession*>(se);
     if(userSession == nullptr)
         return;
-
     int userId = userSession->userid();
 
     auto& payload = msg.payload();
 
     if(!payload.contains("groupId"))
         return;
-
     int groupId = payload.at("groupId").get<int>();
-
     GroupModel model;
-
     auto group = model.findById(groupId);
 
     Message reply;
@@ -129,7 +124,6 @@ void GroupService::joinGroup(const Message& msg,Session*se)
         se->send(reply);
         return;
     }
-
     if(model.isGroupMember(groupId,userId))
     {
         reply.payload()["code"] = -1;
@@ -151,15 +145,11 @@ void GroupService::joinGroup(const Message& msg,Session*se)
     reply.payload()["message"] = ok ? "success" : "failed";
 
     se->send(reply);
-    
-
-
 }
 void GroupService::leaveGroup(const Message& msg, Session* se)
 {
     if(se == nullptr)
         return;
-
     if(!se->authenticated())
         return;
 
@@ -168,14 +158,11 @@ void GroupService::leaveGroup(const Message& msg, Session* se)
         return;
 
     int userId = userSession->userid();
-
     auto& payload = msg.payload();
-
     if(!payload.contains("groupId"))
         return;
 
     int groupId = payload.at("groupId").get<int>();
-
     GroupModel model;
 
     Message reply;
@@ -187,13 +174,12 @@ void GroupService::leaveGroup(const Message& msg, Session* se)
     {
         reply.payload()["code"] = -1;
         reply.payload()["message"] = "not group member";
-
         se->send(reply);
         return;
     }
 
     auto role = model.getGroupMemberRole(groupId,userId);
-
+    std::cout << "leave group:"<< " userId=" << userId<< " groupId=" << groupId<< " role=" << static_cast<int>(role)<< std::endl;
     if(role == GroupRole::Owner)
     {
         reply.payload()["code"] = -1;
@@ -205,6 +191,15 @@ void GroupService::leaveGroup(const Message& msg, Session* se)
 
     bool ok = model.removeGroupMember(groupId,userId);
 
+    if(ok)
+   {
+    auto members = model.findGroupMembers(groupId);
+
+    if(members.empty())
+    {
+        model.removeGroup(groupId);
+    }
+    }
     reply.payload()["code"] = ok ? 0 : -1;
     reply.payload()["groupId"] = groupId;
     reply.payload()["message"] = ok ? "success" : "failed";
@@ -215,14 +210,12 @@ void GroupService::groupChat(const Message& msg, Session* se)
 {
     if(se == nullptr)
         return;
-
     if(!se->authenticated())
         return;
 
     auto userSession = dynamic_cast<UserSession*>(se);
     if(userSession == nullptr)
         return;
-
     int userId = userSession->userid();
     auto& payload = msg.payload();
 
@@ -233,11 +226,8 @@ void GroupService::groupChat(const Message& msg, Session* se)
     return;
    int groupId = payload.at("groupId").get<int>();
   std::string content =payload.at("content").get<std::string>();
- 
-
    
-   GroupModel groupModel;
-    
+   GroupModel groupModel;    
    auto group = groupModel.findById(groupId);
 
   if(!group)
@@ -277,8 +267,6 @@ void GroupService::groupChat(const Message& msg, Session* se)
    {
     return;
    }
-
-
    auto members=groupModel.findGroupMembers(groupId);
    Message forward;
    forward.setType(Messagetype::GroupChat);
@@ -306,7 +294,7 @@ void GroupService::groupChat(const Message& msg, Session* se)
     else
     {
         OfflineMessage offline;
-        offline.setUserId(userId);
+        offline.setUserId(userid);
         offline.setMessageId(chat.id());
         offline.setCreateTime(std::chrono::system_clock::now());
 
@@ -315,7 +303,6 @@ void GroupService::groupChat(const Message& msg, Session* se)
    }
 
    Message ack;
-
    ack.setType(Messagetype::MessageAck);
    ack.setSequence(msg.sequence());
    ack.payload()["code"] = 0;
@@ -323,4 +310,44 @@ void GroupService::groupChat(const Message& msg, Session* se)
 
      se->send(ack);
 
+}
+void GroupService::groupList(const Message& msg,Session* se)
+{
+  if(se==nullptr)
+  return;
+  if(!se->authenticated())
+  return;
+
+  auto userSession=dynamic_cast<UserSession*>(se);
+  if(userSession ==nullptr)
+  return;
+
+  int userId=userSession->userid();
+  GroupModel model;
+  auto groups=model.findUserGroups(userId);
+  std::cout<<"userid="<<userId<<" group count="<<groups.size()<<std::endl;
+  for(auto& group:groups)
+  {
+   std::cout<<"id="<<group.id()<<" name="<<group.name()<<std::endl;
+}
+
+  Message reply;
+  reply.setType(Messagetype::GroupListResponse);
+  reply.setSequence(msg.sequence());
+  reply.setReceiverId(userId);
+  reply.payload()["code"]=0;
+  auto& list=reply.payload()["groups"];
+
+  for(auto& group:groups)
+  {
+    nlohmann::json item;
+    item["groupId"]=group.id();
+    item["name"]=group.name();
+    item["description"]=group.description();
+    item["ownId"]=group.OwnerId();
+
+    list.push_back(item);
+  }
+
+    se->send(reply);
 }

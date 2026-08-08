@@ -38,15 +38,9 @@ void TcpServer::setMessageCallback(const Messagecallback& cb)
 }
 void TcpServer::newConnection(int sockfd,const InetAddress& peeraddress)
 {
-    std::cout
-<<"accept thread:"
-<<std::this_thread::get_id()
-<<std::endl;
+    std::cout<<"accept thread:"<<std::this_thread::get_id()<<std::endl;
     EventLoop* ioLoop=threadpool_->getNextLoop();
-    std::cout
-<<"ioLoop thread:"
-<<ioLoop->threadId()
-<<std::endl;
+    std::cout<<"ioLoop thread:"<<ioLoop->threadId()<<std::endl;
    std::string conname ="conn#" + std::to_string(connid_++);
     TcpConnectionptr conn(new TcpConnection(ioLoop,conname,sockfd,listenAddr_,peeraddress));
    
@@ -59,19 +53,12 @@ void TcpServer::newConnection(int sockfd,const InetAddress& peeraddress)
 }
 void TcpServer::removeConnection(const TcpConnectionptr& conn)
 {
-     std::cout
-    <<"removeConnection thread:"
-    <<std::this_thread::get_id()
-    <<std::endl;
-
+     std::cout<<"removeConnection thread:"<<std::this_thread::get_id()<<std::endl;
     loop_->runInLoop(std::bind(&TcpServer::removeConnectionInLoop,this,conn));
 }
 void TcpServer::removeConnectionInLoop(const TcpConnectionptr& conn)
 {
-        std::cout
-    <<"removeConnectionInLoop thread:"
-    <<std::this_thread::get_id()
-    <<std::endl;
+    std::cout<<"removeConnectionInLoop thread:"<<std::this_thread::get_id()<<std::endl;
     connections_.erase(conn->name());
     EventLoop*ioLoop=conn->getLoop();
     ioLoop->queueInLoop(std::bind(&TcpConnection::connDestroyed,conn));

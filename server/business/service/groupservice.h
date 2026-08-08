@@ -1,5 +1,6 @@
 #pragma once
-#include "../../protocol/message.h"
+
+#include "../../../common/protocol/message.h"
 #include "../../session/session.h"
 class GroupService
 {
@@ -11,6 +12,7 @@ class GroupService
     void joinGroup(const Message& msg,Session* se);
     void leaveGroup(const Message& msg,Session* se);
     void groupChat(const Message& msg,Session* se);
+    void groupList(const Message& msg,  Session*se);
     private:
     GroupService()=default;
 };

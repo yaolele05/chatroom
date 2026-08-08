@@ -3,22 +3,26 @@
 #include <unordered_map>
 #include<string>
 #include <nlohmann/json.hpp>
-
+#include <mutex>
+#include "../../../common/protocol/message.h"
 using json=nlohmann::json;
 class Session;
 
 class BusinessDispatcher
 {
     public:
-    using Handler=std::function<void(const json&,Session*)>;
+    using Handler=std::function<void(const Message&,Session*)>;
 
     static BusinessDispatcher& instance();
-    void registerHandler(const std::string& type,Handler handler);
-    bool dispatch(const json& message,Session* session);
+    void registerHandler(const Messagetype type,Handler handler);
+    bool dispatch(const Message& message,Session* session);
 
     private:
     BusinessDispatcher()=default;
 
-    std::unordered_map<std::string,Handler>handlers_;
+     BusinessDispatcher(const BusinessDispatcher&)=delete;
+     BusinessDispatcher& operator=(const BusinessDispatcher&)=delete;
+    std::unordered_map<Messagetype,Handler>handlers_;
 
+    std::mutex mutex_;
 };

@@ -3,7 +3,7 @@
 #include <memory>
 #include <mutex>
 #include "usersession.h"
-#include "Tcpconnection.h"
+#include "../../minimuduo/net/Tcpconnection.h"
 class SessionManager
 {
     public:
@@ -22,8 +22,9 @@ class SessionManager
     size_t onlineCount() const;
     std::vector<UserSessionPtr> onlineUsers() const;///
     void clear();
-    void foreachSession(const std::function<void(UserSessionPtr)>& cb);///
-
+    void foreachSession(const std::function<void(UserSessionPtr)>& cb);///////容易死锁
+     void bindUser(UserSession* session);
+      void unbindUser(UserSession* session);
     private:
     SessionManager()=default;
     ~SessionManager()=default;

@@ -14,11 +14,15 @@ bool SessionManager:: addSession(const std::shared_ptr<UserSession>& session)
     return false;
    }
    std::lock_guard<std::mutex> lock(mutex_);
-   useridsessions_[session->userid()]=session;
-   usernamesessions_[session->username()]=session;
-   connectionsessions_[session->connection().get()]=session;
+     connectionsessions_[session->connection().get()] = session;
 
-   return true;
+    if(session->userid()!=0)
+        useridsessions_[session->userid()] = session;
+
+    if(!session->username().empty())
+        usernamesessions_[session->username()] = session;
+
+    return true;
 }
 bool SessionManager::removeSession(TcpConnection* conn)
 {
@@ -28,8 +32,11 @@ bool SessionManager::removeSession(TcpConnection* conn)
       return false;
 
       auto session=it->second;
-      useridsessions_.erase(session->userid());
-       usernamesessions_.erase(session->username());
+       if(session->userid() != 0)
+        useridsessions_.erase(session->userid());
+       if(!session->username().empty())
+        usernamesessions_.erase(session->username());
+
       connectionsessions_.erase(it);////
 
     return true;
@@ -105,4 +112,27 @@ void SessionManager::foreachSession(const std::function<void(SessionManager::Use
   {
     cb(session);
   }
+}
+void SessionManager::bindUser(UserSession* session)
+{
+    if(session==nullptr)
+        return;
+
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    useridsessions_[session->userid()] = connectionsessions_[session->connection().get()];
+    usernamesessions_[session->username()] = connectionsessions_[session->connection().get()];
+}
+void SessionManager::unbindUser(UserSession* session)
+{
+    if(session == nullptr)
+        return;
+
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    useridsessions_.erase(session->userid());
+    usernamesessions_.erase(session->username());
+    session->setUserid(0);
+    session->setUsername("");
+    session->setAuthenticated(false);
 }

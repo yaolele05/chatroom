@@ -40,14 +40,12 @@ bool TcpClient::connect(const std::string& ip, uint16_t port)
     sockaddr_in serverAddr{};
         serverAddr.sin_family=AF_INET;
         serverAddr.sin_port=htons(port);
-
         if(::inet_pton(AF_INET,ip.c_str(),&serverAddr.sin_addr)<=0)
         {
             ::close(sockfd);
             return false;
         }
         state_=State::kConnecting;
-
         if(::connect(sockfd,reinterpret_cast<sockaddr*>(&serverAddr),sizeof(serverAddr))<0) ///有阻塞
         {
             perror("connect");
@@ -57,7 +55,7 @@ bool TcpClient::connect(const std::string& ip, uint16_t port)
         }
         connection_=std::make_shared<ClientConnection>(loop_,sockfd);
          connection_->connectEstablished();
-         state_=State::kDisconnected;
+         state_=State::kConnected;
 
          return true;
 

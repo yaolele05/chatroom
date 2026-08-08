@@ -3,7 +3,7 @@
 #include "socket.h"
 #include "channel.h"
 #include "inetaddress.h"
-#include "buffer.h"
+#include "../../common/buffer.h"
 #include "callback.h"
 #include <unistd.h>
 #include <errno.h>
@@ -41,15 +41,13 @@ void TcpConnection::connEstablished()
 }
 void TcpConnection::connDestroyed()
 {
-   if(state_==kConnected)
-   {
-    state_=kDisconnected;
+   
     if(connectionCallback_)
         {
             connectionCallback_(shared_from_this());
         }
 
-   }
+   
    channel_.disableAll();
    channel_.remove();
 }
@@ -78,10 +76,7 @@ void TcpConnection::handleRead()
     {
         if(messageCallback_)
         {
-            std::cout
-<<"handleRead thread id:"
-<<std::this_thread::get_id()
-<<std::endl;
+            std::cout<<"handleRead thread id:"<<std::this_thread::get_id()<<std::endl;
             messageCallback_(shared_from_this(),inputBuffer_.get());
         }
     }

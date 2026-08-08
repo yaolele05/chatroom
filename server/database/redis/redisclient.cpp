@@ -174,12 +174,12 @@ bool RedisClient::setUserOnline(int userid)
 }
 bool RedisClient::setUserOffline(int userid)
 {
-    return del("user::online:"+std::to_string(userid));
+    return del("user:online:"+std::to_string(userid));
 
 }
 bool RedisClient::isUserOnline(int userid)
 {
-    auto value=get("user::online:"+std::to_string(userid));
+    auto value=get("user:online:"+std::to_string(userid));
 
     return value.has_value();
 }
@@ -191,9 +191,13 @@ std::optional<std::string> RedisClient::getToken(int userid)
 {
     return get("token:"+std::to_string(userid));
 }
+bool RedisClient::deleteToken(int userid)
+{
+    return del("user:token:" + std::to_string(userid));
+}
 bool RedisClient::refreshHeartbeat(int userid)
 {
-    return expire("online:" + std::to_string(userid), 60);
+    return expire("user:online:" + std::to_string(userid), 60);
 }
 bool RedisClient::publish(const std::string& channel,const std::string& message)
 {

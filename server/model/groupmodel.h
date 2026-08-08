@@ -20,6 +20,7 @@ class GroupModel
     std::vector<Group> findUserGroups(int userid);
     bool isGroupMember(std::int64_t groupid,int userid);
     GroupRole getGroupMemberRole(std::int64_t groupid,int userid);
+    bool removeGroup(int64_t groupId);
     private:
     Group makeGroup(MysqlResult& result);
     GroupMember makeGroupMember(MysqlResult& result);

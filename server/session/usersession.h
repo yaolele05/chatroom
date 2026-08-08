@@ -2,21 +2,22 @@
 #include "session.h"
 #include <string>
 #include <chrono>
-#include "callback.h"
+#include "../../minimuduo/net/callback.h"
 class UserSession:public Session
 {
     public:
-     explicit UserSession(const TcpConnectionptr& conn);
+     explicit UserSession(const TcpConnectionptr& conn=nullptr);
 
      void login(int userid,const std::string& name);
      void logout();
      void reset();
 
-     int userid() const;
+     int userid() const override;
      const std::string&username() const;
 
      bool online() const;
-     bool authenticated() const;
+     bool authenticated() const override;
+     void setUserid(int id);
      void setOnline(bool online);
      void setAuthenticated(bool v);
      void setUsername(const std::string& username);

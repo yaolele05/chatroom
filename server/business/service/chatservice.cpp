@@ -18,6 +18,7 @@ ChatService& ChatService::instance()
 }
 void ChatService::registerHandler()
 {
+   std::cout<<"enter PrivateChat"<<std::endl;
    BusinessDispatcher::instance().registerHandler(
       Messagetype::PrivateChat,[](const Message& message,Session*session)
       {
@@ -50,7 +51,8 @@ void ChatService::PrivateChat(const Message& message,Session* session)
    }
 
    std::string content=payload.at("content").get<std::string>();
-
+   std::cout<<"PrivateChat:"<<"sender="<<sendId<<" receiver="<<receiverId<<" content="<<content<<std::endl;
+   
    ChatMessage chat;
    chat.setSendId(sendId);
    chat.setReceiverId(receiverId);
@@ -65,19 +67,6 @@ void ChatService::PrivateChat(const Message& message,Session* session)
       return;
    }
 
-   auto receiver =SessionManager::instance().getSession(receiverId);
-   if(!receiver)
-   {
-      OfflineMessageModel offlineModel;
-      OfflineMessage offline;
-      offline.setUserId(receiverId);
-      offline.setMessageId(chat.id());
-      offline.setCreateTime(std::chrono::system_clock::now());
-
-      offlineModel.insert(offline);
-     return;
-   }
-   
    Message reply;
    reply.setType(Messagetype::PrivateChat);
    reply.setSequence(message.sequence());
@@ -87,7 +76,27 @@ void ChatService::PrivateChat(const Message& message,Session* session)
 
    reply.payload()["content"]=content;
 
-   receiver->send(reply);
+   auto receiver =SessionManager::instance().getSession(receiverId);
+   std::cout<< "receiver="<< receiver.get()<< std::endl;
+   if(!receiver)
+   {
+      OfflineMessageModel offlineModel;
+      OfflineMessage offline;
+      offline.setUserId(receiverId);
+      offline.setMessageId(chat.id());
+      offline.setType(OfflineType::ChatMessage);
+      offline.setCreateTime(std::chrono::system_clock::now());
+
+      bool ok = offlineModel.insert(offline);
+      std::cout<< "offline insert="<< ok<< " messageId="<< chat.id()<< std::endl;
+    
+   }
+   else
+   {
+      std::cout<< "authenticated="<< receiver->authenticated() << std::endl;
+      receiver->send(reply);
+   }
+   
 
    Message ack;
    ack.setType(Messagetype::MessageAck);
@@ -97,5 +106,6 @@ void ChatService::PrivateChat(const Message& message,Session* session)
    ack.payload()["code"]=0;
    ack.payload()["msg"]="success";
    session->send(ack);
+  
 
 }

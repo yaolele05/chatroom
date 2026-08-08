@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../protocol/message.h"
+#include "../../../common/protocol/message.h"
 class Session;
 class ChatService
 {

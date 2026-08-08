@@ -10,7 +10,7 @@ class FriendModel
     bool isFriend(int userid,int friendid);
     
     std::vector<Friend> findFriends(int userid);
-
+    ///std::vector<User> findFriendUsers(...);
     private:
     Friend makeFriend(MysqlResult& result);
     

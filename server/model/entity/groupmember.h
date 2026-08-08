@@ -1,29 +1,64 @@
 #pragma once
 #include <chrono>
+#include <cstdint>
 
 enum class GroupRole
 {
-    Member=0,Admin=1,Owner=2
+   Member=0,
+    Admin=1,
+    Owner=2
 };
 class GroupMember
 {
     public:
     GroupMember()=default;
+    std::int64_t id() const
+    {
+        return id_;
+    }
+    void setId(std::int64_t id)
+    {
+        id_=id;
+    }
+    int groupId() const
+    {
+        return groupId_;
+    }
+    void setGroupId(std::int64_t groupId)
+    {
+        groupId_=groupId;
+    }
+    int userId() const
+    {
+        return userId_;
+    }
+    void setUserId(int userId)
+    {
+        userId_=userId;
+    }
+    GroupRole role() const
+    {
+        return role_;
+    }
+    void setRole(GroupRole role)
+    {
+        role_=role;
+    }
+    std::chrono::system_clock::time_point createTime() const
+    {
+        return createTime_;
+    }
+    void setCreateTime(const std::chrono::system_clock::time_point& createTime)
+    {
+        createTime_=createTime;
+    }
 
-    int groupId() const;
-    void setGroupId(int groupId);
 
-    int userId() const;
-    void setUserId(int userId);
-    GroupRole role() const;
-    void setRole(GroupRole role);
-      std::chrono::system_clock::time_point JoinTime() const;
-    void setJoinTime(const std::chrono::system_clock::time_point& time);
-
-    private:
-    int groupId_;
+private:
+    std::int64_t id_;
+    std::int64_t groupId_;
     int userId_;
-    int role_;
-    GroupRole role_{GroupRole::Member};
-    std::chrono::system_clock::time_point joinTime_;
+    GroupRole role_;
+    std::chrono::system_clock::time_point createTime_;  
+
 };

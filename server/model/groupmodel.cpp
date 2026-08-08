@@ -176,6 +176,26 @@ bool GroupModel::removeGroupMember(std::int64_t groupid,int userid)
     MysqlPool::instance().releaseConnection(conn);
     return true;
 }
+bool GroupModel::removeGroup(int64_t groupId)
+{
+    auto conn=MysqlPool::instance().getConnection();
+
+    if(!conn)
+        return false;
+
+    auto stmt=conn->prepare("DELETE FROM chat_group WHERE id=?");
+    if(!stmt)
+    {
+        MysqlPool::instance().releaseConnection(conn);
+        return false;
+    }
+    stmt->bind(0,groupId);
+    bool ok=stmt->execute();
+
+    MysqlPool::instance().releaseConnection(conn);
+
+    return ok;
+}
 std::vector<GroupMember>GroupModel::findGroupMembers(std::int64_t groupid)
 {
     auto conn=MysqlPool::instance().getConnection();
@@ -222,8 +242,10 @@ std::vector<Group> GroupModel::findUserGroups(int userid)
     while(result.fetch())
     {
         auto group=makeGroup(result);
+         std::cout << "findUserGroups:"<< " userid=" << userid<< " groupId=" << group.id()<< " name=" << group.name()<< " ownerId=" << group.OwnerId()<< std::endl;
         groups.push_back(group);
     }
+       std::cout << "findUserGroups count="<< groups.size()<< std::endl;
     MysqlPool::instance().releaseConnection(conn);
     return groups;
 }

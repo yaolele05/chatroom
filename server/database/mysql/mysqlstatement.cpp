@@ -80,20 +80,6 @@ bool MysqlStatement::bind(int index,bool value)
 
    return true;
 }
-bool MysqlStatement::bind(int index,uint64_t value)
-{
-    if(index<0 ||index>=static_cast<int>(binds_.size()))
-    return false;
-
-    values_[index]=value;
-        auto &va=std::get<uint64_t>(values_[index]);
-    MYSQL_BIND& bind=binds_[index];
-     bind.buffer_type = MYSQL_TYPE_LONGLONG;
-    bind.buffer= &va;
-    bind.buffer_length =sizeof(va);
-      bind.is_unsigned=true;
-      return true;
-}
 
 bool MysqlStatement::bind(int index,double value)
 {
@@ -109,7 +95,34 @@ bool MysqlStatement::bind(int index,double value)
     
       return true;
 }
+bool MysqlStatement::bind(int index,int64_t value)
+{
+    if(index<0 ||index>=static_cast<int>(binds_.size()))
+    return false;
 
+    values_[index]=value;
+        auto &va=std::get<int64_t>(values_[index]);
+    MYSQL_BIND& bind=binds_[index];
+     bind.buffer_type = MYSQL_TYPE_LONGLONG;
+    bind.buffer= &va;
+    bind.buffer_length =sizeof(va);
+    
+      return true;
+}
+bool MysqlStatement::bind(int index, uint64_t value)
+{
+    if(index<0 ||index>=static_cast<int>(binds_.size()))
+    return false;
+
+    values_[index]=value;
+        auto &va=std::get<uint64_t>(values_[index]);
+    MYSQL_BIND& bind=binds_[index];
+     bind.buffer_type = MYSQL_TYPE_LONGLONG;
+    bind.buffer= &va;
+    bind.buffer_length =sizeof(va);
+    
+      return true;
+}
 bool MysqlStatement::execute()
 {
 

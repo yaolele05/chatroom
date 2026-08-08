@@ -1,22 +1,22 @@
 #include "mysqlresult.h"
 #include<cstring>
-
+#include <iostream>
 MysqlResult::MysqlResult(MYSQL_STMT* stmt):stmt_(stmt)
 {
 
     if(!stmt_)
     return;
 
+     if (mysql_stmt_store_result(stmt_) != 0)
+   {
+    throw std::runtime_error(mysql_stmt_error(stmt_));
+   }
     metadata_=mysql_stmt_result_metadata(stmt_);
 
     if(!metadata_)
     return;
 
     bindResult();
-    if (mysql_stmt_store_result(stmt_) != 0)
-  {
-    throw std::runtime_error(mysql_stmt_error(stmt_));
-   }
 }
 MysqlResult::~MysqlResult()
 {
@@ -93,14 +93,10 @@ void MysqlResult::bindResult()
 
   }
   bind.buffer_type = fields[i].type;
-
   bind.buffer = buffers_[i].data();
-
   bind.buffer_length =static_cast<unsigned long>(buffers_[i].size());
-
   bind.length = &lengths_[i];
   bind.is_null = reinterpret_cast<bool*>(&nullFlags_[i]);
-
   bind.is_unsigned = (fields[i].flags & UNSIGNED_FLAG) != 0;
 
  }
@@ -116,8 +112,21 @@ bool MysqlResult::fetch()
         return false;
     }
     int ret = mysql_stmt_fetch(stmt_);
+    std::cout<<"mysql_stmt_fetch ret="
+         <<ret
+         <<std::endl;
     if (ret == 0)
     {
+        for(size_t i=0;i<buffers_.size();i++)
+    {
+        std::cout<<"field "
+                 <<i
+                 <<" length="
+                 <<lengths_[i]
+                 <<" null="
+                 <<(int)nullFlags_[i]
+                 <<std::endl;
+    }
         return true;
     }
     if (ret == MYSQL_NO_DATA)

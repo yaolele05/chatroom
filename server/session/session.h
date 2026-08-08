@@ -1,6 +1,9 @@
 #pragma once
 #include <string>
 #include "../../minimuduo/net/callback.h"
+#include <nlohmann/json.hpp>
+#include "../../common/protocol/message.h"
+using json=nlohmann::json;
 class Session
 {
 
@@ -8,7 +11,16 @@ class Session
    Session (const TcpConnectionptr& conn );
     virtual ~Session() = default;
 
-   void send(const std::string& msg);
+    virtual bool authenticated() const
+   {
+    return false;
+   }
+   virtual int userid() const
+   {
+    return -1;
+   }
+    void send(const std::string& data);
+   void send(const Message& msg);
    void close();
    bool connected() const;
    const TcpConnectionptr& connection() const;///

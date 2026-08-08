@@ -28,7 +28,7 @@ class MysqlClient
     bool beginTransaction();
     bool commit();
     bool rollback();
-    uint64_t lastInsertId() const;
+    int64_t lastInsertId() const;
     
     std::string error() const;
     bool ping();

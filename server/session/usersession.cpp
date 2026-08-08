@@ -53,6 +53,10 @@ void UserSession::setAuthenticated(bool v)
 {
     authenticated_=v;
 }
+void UserSession::setUserid(int id)
+{
+    userid_=id;
+}
 void UserSession:: setUsername(const std::string& username)
 {
     username_=username;

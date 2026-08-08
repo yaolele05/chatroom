@@ -6,7 +6,7 @@
 class OfflineMessageModel
 {
     public:
-    bool insert(const OfflineMessage& message);
+    bool insert(OfflineMessage& message);
 
     std::vector<OfflineMessage> findByUserId(int userid);
     bool remove(std::int64_t id);

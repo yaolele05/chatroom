@@ -1,13 +1,11 @@
 #include "messagemodel.h"
-
 #include "../database/connectionpool/mysqlpool.h"
 #include "../database/mysql/mysqlclient.h"
 #include "../database/mysql/mysqlstatement.h"
-
 #include <chrono>
-Message MessageModel::makeMessage(MysqlResult& result)
+ChatMessage MessageModel::makeMessage(MysqlResult& result)
 {
-    Message message;
+    ChatMessage message;
     message.setId(result.get<std::int64_t>(0));
     message.setSendId(result.get<int>(1));
     message.setReceiverId(result.get<int>(2));
@@ -18,7 +16,7 @@ Message MessageModel::makeMessage(MysqlResult& result)
    message.setSendTime(std::chrono::system_clock::time_point(std::chrono::seconds(timestamp)));
     return message;
 }
-bool MessageModel::insert(Message& message)
+bool MessageModel::insert(ChatMessage& message)
 {
     auto conn=MysqlPool::instance().getConnection();
     if(!conn)
@@ -29,6 +27,12 @@ bool MessageModel::insert(Message& message)
     auto stmt=conn->prepare(R"(INSERT INTO message(
         sender_id,receiver_id,group_id,type,content,create_time)VALUES(?,?,?,?,?,?)
     )");
+
+     if(!stmt)
+     {
+    MysqlPool::instance().releaseConnection(conn);
+    return false;
+     }
     stmt->bind(0, message.sendId());
     stmt->bind(1, message.receiverId());
     stmt->bind(2, message.groupId());
@@ -37,15 +41,18 @@ bool MessageModel::insert(Message& message)
     stmt->bind(5, std::chrono::duration_cast<std::chrono::seconds>(message.sendTime().time_since_epoch()).count());
 
     bool ok=stmt->execute();
-    if(ok)
+
+    if(!ok)
     {
-        message.setId(static_cast<std::int64_t>(conn->lastInsertId()));
+     MysqlPool::instance().releaseConnection(conn);
+        return ok;
     }
+     message.setId(static_cast<std::int64_t>(conn->lastInsertId()));
     MysqlPool::instance().releaseConnection(conn);
     return ok;
 
 }
-std::optional<Message>MessageModel::findById(std::int64_t id)
+std::optional<ChatMessage>MessageModel::findById(std::int64_t id)
 {
     auto conn=MysqlPool::instance().getConnection();
     if(!conn)
@@ -82,7 +89,7 @@ std::optional<Message>MessageModel::findById(std::int64_t id)
     MysqlPool::instance().releaseConnection(conn);
     return std::nullopt;
 }
-std::vector<Message> MessageModel::findPriHistory(int userid, int peerid,size_t limit,size_t offset)
+std::vector<ChatMessage> MessageModel::findPriHistory(int userid, int peerid,size_t limit,size_t offset)
 {
     auto conn=MysqlPool::instance().getConnection();
     if(!conn)
@@ -117,7 +124,7 @@ std::vector<Message> MessageModel::findPriHistory(int userid, int peerid,size_t 
     stmt->bind(5,static_cast<int>(offset));
 
     auto result=stmt->query();
-    std::vector<Message> messages;
+    std::vector<ChatMessage> messages;
     while(result.fetch())
     {
         auto message=makeMessage(result);
@@ -126,7 +133,7 @@ std::vector<Message> MessageModel::findPriHistory(int userid, int peerid,size_t 
     MysqlPool::instance().releaseConnection(conn);
     return messages;
 }
-std::vector<Message> MessageModel::findGroupHistory(int groupid,size_t limit,size_t offset)
+std::vector<ChatMessage> MessageModel::findGroupHistory(int groupid,size_t limit,size_t offset)
 {
     auto conn=MysqlPool::instance().getConnection();
     if(!conn)
@@ -159,7 +166,7 @@ std::vector<Message> MessageModel::findGroupHistory(int groupid,size_t limit,siz
     stmt->bind(2,static_cast<int>(offset));
 
     auto result=stmt->query();
-    std::vector<Message> messages;
+    std::vector<ChatMessage> messages;
     while(result.fetch())
     {
         auto message=makeMessage(result);
@@ -168,7 +175,7 @@ std::vector<Message> MessageModel::findGroupHistory(int groupid,size_t limit,siz
     MysqlPool::instance().releaseConnection(conn);
     return messages;
 }
-std::vector<Message> MessageModel::findUserGroupHistory(int userid,int groupid,size_t limit,size_t offset)
+std::vector<ChatMessage> MessageModel::findUserGroupHistory(int userid,int groupid,size_t limit,size_t offset)
 {
     auto conn=MysqlPool::instance().getConnection();
     if(!conn)
@@ -202,7 +209,7 @@ std::vector<Message> MessageModel::findUserGroupHistory(int userid,int groupid,s
     stmt->bind(3,static_cast<int>(offset));
 
     auto result=stmt->query();
-    std::vector<Message> messages;
+    std::vector<ChatMessage> messages;
     while(result.fetch())
     {
         auto message=makeMessage(result);

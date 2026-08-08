@@ -1,7 +1,8 @@
 #pragma once
 #include"../../session/session.h"
 #include <nlohmann/json.hpp>
-#include "../../protocol/message.h"
+
+#include "../../../common/protocol/message.h"
 class HeartbeatService
 {
     public:

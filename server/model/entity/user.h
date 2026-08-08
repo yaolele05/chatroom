@@ -4,37 +4,93 @@
 
 class User
 {
-    public:
-     User()=default;
-     int id() const;
-     void setId(int id);
-     const std::string& username() const;
-     void setUsername(const std::string& username);
-     const std::string& passwordHash() const;
-     void setPasswordHash(const std::string& passwordHash);
-     const std::string& nickname() const;
-     void setNickname(const std::string& nickname);
-     const std::string& avatar() const;
-     void setAvatar(const std::string& avatar);
-     const std::string& signature() const;
-     void setSignature(const std::string& sign);
-      bool online() const;
-      void setOnline(bool online);
+public:
 
-      std::chrono::system_clock::time_point createTime() const;
-      void setCreateTime(const std::chrono::system_clock::time_point& time);
+User() = default;
 
-      std::chrono::system_clock::time_point updateTime() const;
-      void setUpdateTime(const std::chrono::system_clock::time_point& time);
+int id() const
+    {
+        return id_;
+    }
 
+    void setId(int id)
+    {
+        id_ = id;
+    }
 
-    private:
+    const std::string& username() const
+    {
+        return username_;
+    }
+
+    void setUsername(const std::string& username)
+    {
+        username_ = username;
+    }
+
+    const std::string& passwordHash() const
+    {
+        return passwordHash_;
+    }
+
+    void setPasswordHash(const std::string& passwordHash)
+    {
+        passwordHash_ = passwordHash;
+    }
+
+    const std::string& nickname() const
+    {
+        return nickname_;
+    }
+
+    void setNickname(const std::string& nickname)
+    {
+        nickname_ = nickname;
+    }
+
+    const std::string& avatar() const
+    {
+        return avatar_;
+    }
+
+    void setAvatar(const std::string& avatar)
+    {
+        avatar_ = avatar;
+    }
+
+    const std::string& signature() const
+    {
+        return signature_;
+    }
+
+ void setSignature(const std::string& sign)
+    {
+        signature_ = sign;
+    }
+ std::chrono::system_clock::time_point createTime() const
+    {
+        return createTime_;
+    }
+void setCreateTime(const std::chrono::system_clock::time_point& time)
+    {
+        createTime_ = time;
+    }
+std::chrono::system_clock::time_point updateTime() const
+    {
+        return updateTime_;
+    }
+void setUpdateTime(const std::chrono::system_clock::time_point& time)
+ {
+        updateTime_ = time;
+}
+
+private:
     int id_{0};
     std::string username_;
     std::string passwordHash_;
-    std::string nickname_;
-    std::string avatar_;
-    std::string signature;
-    bool online_{false};
-    std::string createTime_;
+   std::string nickname_;
+  std::string avatar_;
+    std::string signature_;
+    std::chrono::system_clock::time_point createTime_;
+    std::chrono::system_clock::time_point updateTime_;
 };

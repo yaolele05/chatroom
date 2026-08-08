@@ -6,6 +6,8 @@
 #include "../../model/friendmodel.h"
 #include "../../model/usermodel.h"
 #include "../../database/connectionpool/redispool.h"
+#include<iostream>
+
 FriendService& FriendService::instance()
 {
     static FriendService service;
@@ -13,6 +15,7 @@ FriendService& FriendService::instance()
 }
 void FriendService::registerHandler()
 {
+    std::cout << "register Friend handler" << std::endl;
     auto& dispatcher=BusinessDispatcher::instance();
    dispatcher.registerHandler(Messagetype::AddFriend,[](const Message& message,Session* session)
 {
@@ -32,20 +35,25 @@ void FriendService::addFriend(const Message& msg,Session* se)
 {
     if(se==nullptr)
     return;
-
     if(!se->authenticated())
     return;
-
     auto userSession=dynamic_cast<UserSession*>(se);
 
       if(userSession==nullptr)
       return;
-
       int userId=userSession->userid();
       auto& payload=msg.payload();
       if(!payload.contains("friendId"))
       return;
      int friendId=payload.at("friendId").get<int>();
+       if(userId==friendId)
+     {
+         Message reply;
+      reply.payload()["message"]="cannot add yourself";
+       se->send(reply);
+       return;
+     }  
+      std::cout<<"add friend request:"<<"userid="<<userSession->userid()<<" friendid="<<friendId<<std::endl;
 
      Friend rela;
      rela.setUserId(userId);
@@ -63,7 +71,7 @@ void FriendService::addFriend(const Message& msg,Session* se)
      reply.payload()["code"]=ok? 0:-1;
      reply.payload()["friendId"]=friendId;
      reply.payload()["message"]= ok? "success":"failed";
-
+     reply.payload()["reason"]=ok?"":"database insert failed";
      se->send(reply);
 
 }
@@ -71,7 +79,6 @@ void FriendService:: deleteFriend(const Message& msg,Session* se)
 {
      if(se==nullptr)
     return;
-
     if(!se->authenticated())
     return;
 
@@ -85,7 +92,6 @@ void FriendService:: deleteFriend(const Message& msg,Session* se)
       if(!payload.contains("friendId"))
       return;
      int friendId=payload.at("friendId").get<int>();
-
      FriendModel model;
      bool ok=model.removeFriend(userId,friendId);
 
@@ -112,14 +118,12 @@ void FriendService::FriendList(const Message& msg,Session*se)
      auto userSession=dynamic_cast<UserSession*>(se);
      if(userSession==nullptr)
      return;
-
      int userId=userSession->userid();
 
      FriendModel fmodel;
      auto rela=fmodel.findFriends(userId);
     
      UserModel userModel;
-     
      Message reply;
      reply.setType(Messagetype::FriendListResponse);
      reply.setSequence(msg.sequence());
@@ -132,7 +136,6 @@ void FriendService::FriendList(const Message& msg,Session*se)
      for(const auto& re:rela)
      {
         auto user=userModel.findById(re.friendId());
-
         if(!user)
         {
             continue;
@@ -143,18 +146,17 @@ void FriendService::FriendList(const Message& msg,Session*se)
             online=redis->isUserOnline(re.friendId());
         }
         nlohmann::json item;
-
         item["id"]=user->id();
         item["username"]=user->username();
         item["nickname"]=user->nickname();
         item["avatar"]=user->avatar();
         item["signature"]=user->signature();
         item["status"]=re.status();
+        item["online"] = online;
 
       payload["friends"].push_back(item);
           
      }
     RedisPool::instance().releaseConnection(redis);
       se->send(reply);
-
 }
