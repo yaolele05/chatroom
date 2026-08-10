@@ -119,13 +119,7 @@ bool MysqlResult::fetch()
     {
         for(size_t i=0;i<buffers_.size();i++)
     {
-        std::cout<<"field "
-                 <<i
-                 <<" length="
-                 <<lengths_[i]
-                 <<" null="
-                 <<(int)nullFlags_[i]
-                 <<std::endl;
+        std::cout<<"field " <<i<<" length="<<lengths_[i] <<" null="<<(int)nullFlags_[i]<<std::endl;
     }
         return true;
     }
