@@ -147,6 +147,7 @@ void LoginService::login(const Message& msg,Session* se)
     userSession->setUserid(user->id());
     userSession->setUsername(user->username());
     userSession->setAuthenticated(true);
+    
     SessionManager::instance().bindUser(userSession);
     auto redis = RedisPool::instance().getConnection();
     if(redis)

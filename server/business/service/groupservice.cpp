@@ -296,6 +296,7 @@ void GroupService::groupChat(const Message& msg, Session* se)
         OfflineMessage offline;
         offline.setUserId(userid);
         offline.setMessageId(chat.id());
+        offline.setType(OfflineType::ChatMessage);
         offline.setCreateTime(std::chrono::system_clock::now());
 
         offlineModel.insert(offline);
