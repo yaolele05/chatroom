@@ -53,6 +53,7 @@ enum class Messagetype : uint16_t
 
     // 文件
     FileStart,
+    GroupFileStart,
     FileChunk,
     FileFinish,
 
@@ -65,5 +66,7 @@ enum class Messagetype : uint16_t
     MessageRecall,
     MessageRead,
 
-    Error
+    Error,
+    HistoryRequest,
+    HistoryResponse
 };

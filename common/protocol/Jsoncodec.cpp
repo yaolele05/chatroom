@@ -42,6 +42,7 @@ std::string JsonCodec::TypeToString(Messagetype type)
     return "heartbeat_response";
 
     case Messagetype::FileStart: return "file_start";
+    case Messagetype::GroupFileStart: return"groupfile_start";
     case Messagetype::FileChunk: return "file_chunk";
     case Messagetype::FileFinish: return "file_finish";
 
@@ -53,7 +54,8 @@ std::string JsonCodec::TypeToString(Messagetype type)
     case Messagetype::MessageRecall:return "message_recall";
     case Messagetype::MessageRead: return "message_read";
     case Messagetype::Error: return "error";
-
+    case Messagetype::HistoryRequest:return "history_request";
+    case Messagetype::HistoryResponse:return "history_response";
     default: return"unknown";
     }
 }
@@ -124,9 +126,11 @@ Messagetype JsonCodec::StringToType(const std::string& type)
      if(type == "heartbeat_response")
     return Messagetype::HeartBeatResponse;
     if(type=="file_start")
-        return Messagetype::FileStart;
+    return Messagetype::FileStart;
+    if(type=="groupfile_start")
+    return Messagetype::GroupFileStart;
     if(type=="file_chunk")
-        return Messagetype::FileChunk;
+    return Messagetype::FileChunk;
 
     if(type=="file_finish")
         return Messagetype::FileFinish;
@@ -146,6 +150,12 @@ Messagetype JsonCodec::StringToType(const std::string& type)
         return Messagetype::MessageRead;
     if(type=="error")
         return Messagetype::Error;
+    if(type=="history_request")
+      return Messagetype::HistoryRequest;
+    if(type=="history_response")
+      return Messagetype::HistoryResponse;
+
+      
     return Messagetype::unknown;
 }
 std::string JsonCodec::encode(const Message& message)
