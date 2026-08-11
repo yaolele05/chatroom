@@ -8,6 +8,7 @@
 #include <iostream>
 #include <sys/epoll.h>
 #include <sys/socket.h>
+#include <nlohmann/json.hpp>
 ClientConnection::ClientConnection(EventLoop* loop,int sockfd):loop_(loop),socket_(sockfd),channel_(loop,sockfd),inputBuffer_(new Buffer()),outputBuffer_(new Buffer())
 {
     channel_.ReadCallback(std::bind(&ClientConnection::handleRead,this));
@@ -139,7 +140,12 @@ void ClientConnection::handleRead()
             {
                 try
                 {
-                    std::cout<<"json:"<<json<<std::endl;
+                   
+                    /*if(json.find("\"data\"") == std::string::npos)
+                    {
+                  std::cout<<"json:"<<json<<std::endl;
+                    }*/
+                    
                    Message message =JsonCodec::decode(json);
                    std::cout<<"message type="<<static_cast<int>(message.type()) <<std::endl;
                    if(messageCallback_)

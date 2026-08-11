@@ -2,6 +2,7 @@
 #include "filetransf.h"
 #include "../minimuduo/net/eventloop.h"
 #include <iostream>
+#include <algorithm>
 
 Client::Client(EventLoop* loop):loop_(loop),tcpClient_(std::make_unique<TcpClient>(loop))
 {
@@ -151,23 +152,34 @@ void Client::groupChat(uint32_t groupId,const std::string& text)
     msg.setTimestamp(time(nullptr));
     auto& payload=msg.payload();
     payload["groupId"]=groupId;
-    payload["text"]=text;
+    payload["content"]=text;
     connection_->send(msg);
 }
-void Client::sendFile(uint32_t userId,const std::string& filename)
+void Client::sendPrivateFile(uint32_t userId,const std::string& filename)
 {
     if(!login_)
     return;
 
     if(fileTransfer_)
     {
-        fileTransfer_->sendFile(userId,filename);
+        fileTransfer_->sendPrivateFile(userId,filename);
 
+    }
+}
+void Client::sendGroupFile(uint32_t groupId,const std::string& filename)
+{
+    if(!login_)
+    {
+        return;
+    }
+    if(fileTransfer_)
+    {
+         fileTransfer_->sendGroupFile(groupId,filename);
     }
 }
 void Client::sendImage(uint32_t userId,const std::string& filename)
 {
-    sendFile(userId,filename);
+    sendPrivateFile(userId,filename);
 }
 
 void Client::registerUser(const std::string& username,const std::string& password)
@@ -236,6 +248,24 @@ void Client::quit()
 {
     loop_->quit();
 }
+void Client::privateHistory(uint32_t userid)
+{
+    Message msg;
+    msg.setType(Messagetype::HistoryRequest);
+    msg.payload()["type"]=1;
+    msg.payload()["peerId"]=userid;
+
+    connection_->send(msg);
+
+}
+void Client::groupHistory(uint32_t gid)
+{
+    Message msg;
+    msg.setType(Messagetype::HistoryRequest);
+    msg.payload()["type"]=2;
+    msg.payload()["groupId"]=gid;
+    connection_->send(msg);
+}
 void Client::onMessage(const Message& msg)
 {
     std::cout << "client receive message type="<< static_cast<int>(msg.type())<< std::endl;
@@ -301,9 +331,17 @@ void Client::onMessage(const Message& msg)
      if(payload.contains("fileId"))
     {
         if(fileTransfer_)
-        {
-            fileTransfer_->handleAck(msg);
-        }
+    {
+        auto stage = msg.payload().value("stage","");
+      if(stage=="start" ||stage=="chunk" ||stage=="finish")
+      {
+        fileTransfer_->handleAck(msg);
+       }
+      else
+      {
+        std::cout<< "[Client] normal message ack"<< std::endl;
+      }
+     }
     }
     break;
     }
@@ -313,6 +351,14 @@ void Client::onMessage(const Message& msg)
     std::cout << "server error: "<< payload.value("message", "")<< std::endl;
     break;
     }
+    case Messagetype::HistoryResponse:
+    handleHistory(msg);
+    break;
+    case Messagetype::OfflineFileNotify:
+    handleOfflineFileNotify(msg);
+    break;
+   
+
     default:
     std::cout<<"unknow message type"<<std::endl;
     break;
@@ -385,9 +431,9 @@ void Client::handleGroupChat(const Message& msg)
 {
     const auto& payload=msg.payload();
 
-    uint32_t groupId=payload.value("group",0u);
-    std::string text=payload.value("text","");
-    std::cout<<"[Group"<<groupId<<"]"<<msg.senderId()<<":"<<text<<std::endl;
+    uint32_t groupId=payload.value("groupId",0u);
+    std::string content=payload.value("content","");
+    std::cout<<"[Group"<<groupId<<"]"<<msg.senderId()<<":"<<content<<std::endl;
 
 }
 void Client::handleFriend(const Message& msg)
@@ -585,3 +631,69 @@ bool Client::waitLoginResult()
     bool ok=login_;
     return ok;
 }
+void Client::handleHistory(const Message& msg)
+{
+    auto& payload=msg.payload();
+    if(!payload.contains("message"))
+    {
+        std::cout<<"history empty\n";
+    }
+    auto messages=payload["message"];
+    std::reverse(messages.begin(),messages.end());
+  
+    if(!messages.is_array())
+    {
+        std::cout<<"messages not array\n";
+        return;
+    }
+    std::reverse(messages.begin(),messages.end());
+    std::cout<<"======== 历史消息 ========\n";
+    for(auto&it:messages)
+    {
+
+        uint32_t senderId=it["senderId"];
+        std::string content=it["content"];
+        std::cout<<"["<<senderId<<"]"<<content<<std::endl;
+    }
+
+    std::cout<<"==========================\n";
+
+}
+void Client::handleOfflineFileNotify(const Message& msg)
+{
+
+auto& payload = msg.payload();
+auto fileId =payload["fileId"].get<int64_t>();
+auto senderId =msg.senderId();
+auto fileName =payload["fileName"].get<std::string>();
+auto fileSize =payload["fileSize"].get<uint64_t>();
+ 
+ bool ok= fileTransfer_->createReceiveTask(fileId,fileName,fileSize);
+
+ if(ok)
+ {
+     handlerequestDownload(fileId);
+     std::cout<<"收到离线文件"<<"\nfileId="<<fileId<<"\n发送者="<<senderId<<"\n文件名="<<fileName<<"\n大小="<<fileSize<<std::endl;
+
+ }
+  std::cout<<"[client] create receivertask failed\n";
+
+}
+void Client::handlerequestDownload(int64_t fileId)
+{
+    if(!connection_)
+        return;
+
+    if(!login_)
+        return;
+
+    Message msg;
+
+    msg.setType(Messagetype::FileDownloadRequest);
+    msg.setSequence(sequence_++);
+    msg.payload()["fileId"] = fileId;
+    std::cout<< "[Client] send DownloadRequest"<< " fileId=" << fileId<< std::endl;
+
+    connection_->send(msg);
+}
+ 

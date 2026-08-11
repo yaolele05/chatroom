@@ -12,35 +12,24 @@ int main()
 {
 
     EventLoop loop;
-
-
     Client client(&loop);
-
-
-    if(!client.connect(
-        "127.0.0.1",
-        8888))
+    if(!client.connect("127.0.0.1",8888))
     {
-        std::cout
-        <<"connect failed\n";
-
+        std::cout<<"connect failed\n";
         return -1;
     }
 
 
-    /*
-        菜单线程
-    */
-    std::thread menuThread(
-        [&client]()
+    
+    //菜单线程
+    std::thread menuThread([&client]()
         {
             loginMenu(client);
         }
     );
 
-    /*
-        Reactor线程
-    */
+  
+    //Reactor线程
    std::cout<<"before loop"<<std::endl;
     loop.loop();
     std::cout<<"after loop"<<std::endl;
@@ -66,6 +55,8 @@ void chatMenu(Client& client)
 9.群聊天
 10.发送文件
 11.注销
+12.查看私聊历史
+13.查看群聊历史
 0.退出
 
 ==========================
@@ -73,12 +64,10 @@ void chatMenu(Client& client)
 )";
         int op;
         std::cout<<"请选择：";
-        if(!(std::cin>>op))
+    if(!(std::cin>>op))
     {
     std::cin.clear();
-    std::cin.ignore(
-        std::numeric_limits<std::streamsize>::max(),
-        '\n');
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
 
     continue;
      }
@@ -181,17 +170,38 @@ void chatMenu(Client& client)
    }
   case 10:
    {
-    uint32_t uid;
+    int type;
+   
+
+    std::cout<<"1.私聊文件\n"<<"2.群文件\n";
+    
+    std::cin >> type;
+    if(type==1)
+    {
+
+         uint32_t uid;
     std::string filename;
-
     std::cout << "请输入接收者ID：";
-    std::cin >> uid;
+      std::cin>>uid;
+    std::cout << "请输入文件路径：";
+  
+      std::cin >> filename;
+      client.sendPrivateFile(uid, filename);
 
+    
+    }
+    if(type==2)
+    {
+         uint32_t gid;
+    std::string filename;
+    std::cout << "请输入接收群ID：";
+    std::cin>>gid;
     std::cout << "请输入文件路径：";
     std::cin >> filename;
+      client.sendGroupFile(gid, filename);
 
-    client.sendFile(uid, filename);
-    
+    }
+
     break;
    }
   
@@ -200,6 +210,29 @@ void chatMenu(Client& client)
    client.logout();
    return;
    }
+
+   case 12:
+   {
+    uint32_t uid;
+    std::cout<<"好友ID:";
+    std::cin>>uid;
+    client.privateHistory(uid);
+    break;
+
+   } 
+
+
+    case 13:
+    {
+
+    uint32_t gid;
+    std::cout<<"群ID:";
+    std::cin>>gid;
+
+    client.groupHistory(gid);
+    break;
+
+     }
 
     case 0:
     exit(0);

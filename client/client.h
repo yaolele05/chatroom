@@ -29,7 +29,8 @@ class Client
     void leaveGroup(uint32_t groupId);
     void groupChat(uint32_t groupId,const std::string& text);
      void groupList();
-    void sendFile(uint32_t userId,const std::string& filename);
+    void sendPrivateFile(uint32_t userId,const std::string& filename);
+    void sendGroupFile(uint32_t groupId,const std::string& filename);
     void sendImage(uint32_t userId,const std::string& filename);
     bool isLogin() const;
     void registerUser(const std::string& username,const std::string& password);
@@ -37,20 +38,23 @@ class Client
      void disconnect();
      void quit();
      bool waitLoginResult();
+     void privateHistory(uint32_t userid);
+     void groupHistory(uint32_t groupid);
     private:
-   void onMessage(const Message& message);
-   void handleLogin(const Message& msg);
-   void handleLogout(const Message& msg);
-   void handlePrivateChat(const Message& msg);
-   void handleFriend(const Message& msg);
-   void handleGroup(const Message& msg);
-   void handleGroupChat(const Message& msg);
-   void handleGroupList(const Message& msg);
-   void handleFile(const Message& msg);
-   void handleHeartbeat(const Message& msg);
+    void onMessage(const Message& message);
+    void handleLogin(const Message& msg);
+    void handleLogout(const Message& msg);
+    void handlePrivateChat(const Message& msg);
+    void handleFriend(const Message& msg);
+    void handleGroup(const Message& msg);
+    void handleGroupChat(const Message& msg);
+    void handleGroupList(const Message& msg);
+    void handleFile(const Message& msg);
+    void handleHeartbeat(const Message& msg);
     void handleRegister(const Message& msg);
- 
-   
+    void handleHistory(const Message& msg);
+    void handleOfflineFileNotify(const Message& msg);
+    void handlerequestDownload(int64_t fileId);
    private:
    EventLoop* loop_;
    std::unique_ptr<TcpClient> tcpClient_;
