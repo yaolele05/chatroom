@@ -56,6 +56,9 @@ std::string JsonCodec::TypeToString(Messagetype type)
     case Messagetype::Error: return "error";
     case Messagetype::HistoryRequest:return "history_request";
     case Messagetype::HistoryResponse:return "history_response";
+    case Messagetype::OfflineFileNotify:return "offlinefile_notify";
+    case Messagetype::FileDownloadRequest:return "filedownload_request";
+  
     default: return"unknown";
     }
 }
@@ -155,7 +158,11 @@ Messagetype JsonCodec::StringToType(const std::string& type)
     if(type=="history_response")
       return Messagetype::HistoryResponse;
 
-      
+      if(type=="offlinefile_notify")
+      return Messagetype::OfflineFileNotify;
+      if(type=="filedownload_request")
+      return Messagetype::FileDownloadRequest;
+
     return Messagetype::unknown;
 }
 std::string JsonCodec::encode(const Message& message)
@@ -257,9 +264,7 @@ void JsonCodec::dataMessage(nlohmann::json& j,Messagetype type)
          if(!j["payload"].contains("content"))
         {
             throw std::runtime_error("chat no content");
-        }
-
-            
+        } 
         }  
 
         default:

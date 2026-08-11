@@ -68,5 +68,7 @@ enum class Messagetype : uint16_t
 
     Error,
     HistoryRequest,
-    HistoryResponse
+    HistoryResponse,
+    OfflineFileNotify,
+    FileDownloadRequest
 };
