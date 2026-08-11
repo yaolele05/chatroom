@@ -6,8 +6,7 @@
 
 #include <chrono>
 #include<optional>
-FileInfo FileModel::makeFileInfo(
-    MysqlResult& result)
+FileInfo FileModel::makeFileInfo(MysqlResult& result)
 {
     FileInfo file;
     file.setId( result.get<std::int64_t>(0));
@@ -184,5 +183,32 @@ bool FileModel::updateFilePath(std::int64_t fileId,const std::string& path)
     stmt->bind(1, fileId);
     bool ok = stmt->execute();
     MysqlPool::instance().releaseConnection(conn);
+    return ok;
+}
+bool FileModel::remove(std::int64_t fileId)
+{
+    auto conn = MysqlPool::instance().getConnection();
+
+    if(!conn)
+    {
+        return false;
+    }
+
+    auto stmt = conn->prepare(
+        R"(DELETE FROM file WHERE id=?)"
+    );
+
+    if(!stmt)
+    {
+        MysqlPool::instance().releaseConnection(conn);
+        return false;
+    }
+
+    stmt->bind(0, fileId);
+
+    bool ok = stmt->execute();
+
+    MysqlPool::instance().releaseConnection(conn);
+
     return ok;
 }

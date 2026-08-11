@@ -6,6 +6,7 @@
 #include <chrono>
 #include "../../model/filemodel.h"
 #include "../businessdispatcher/businessdispatcher.h"
+#include "../../model/filereceivermodel.h"
 OfflineService& OfflineService::instance()
 {
     static OfflineService service;
@@ -36,10 +37,7 @@ void OfflineService::sendOfflineMessage(Session* se)
         sendChatOffline(offline,se);
         success=true;
         break;
-        case OfflineType::File:
-        sendFileOffline(offline,se);
-        success=true;
-        break;
+       
         default:
         break;
         }
@@ -48,6 +46,7 @@ void OfflineService::sendOfflineMessage(Session* se)
         model.remove(offline.id());
         }
     }
+    sendOfflineFile(se);
 }
 void::OfflineService::sendChatOffline(const OfflineMessage& offline,Session* se)
 {
@@ -90,27 +89,44 @@ void OfflineService::sendGroupOffline(const OfflineMessage& offline,Session* se)
    se->send(reply);
 
 }
-bool OfflineService::sendFileOffline(const OfflineMessage& offline,Session* se)
+void OfflineService::sendOfflineFile(Session*se)
 {
-    FileModel model;
-    auto file=model.findById(offline.messageId());
-    if(!file)
+    if(se==nullptr)
+    return;
+    if(!se->authenticated())
+    return;
+    auto userSession=dynamic_cast<UserSession*>(se);
+
+    if(!userSession)
+    return;
+    FileReceiverModel receiverModel;
+      int userid=userSession->userid();
+
+   auto receivers =receiverModel.findWaitingFiles(userid);
+  std::cout<<"offline file count="<<receivers.size()<<std::endl;
+   FileModel fileModel;
+   for(auto& receiver:receivers)
+   {
+     auto file =fileModel.findById(receiver.fileId());
+
+     if(!file)
     {
-        std::cout<<"find filebyID failed"<<std::endl;
-        return false;
+    continue;
+     }
+    if(!file->completed())
+    {
+      continue;
     }
     Message msg;
-    msg.setType(Messagetype::FileFinish);
+    msg.setType(Messagetype::OfflineFileNotify);
     msg.setSenderId(file->senderId());
-    msg.setReceiverId(file->receiverId());
-    auto timestamp=std::chrono::duration_cast<std::chrono::seconds>(file->createTime().time_since_epoch()).count();
-    msg.setTimestamp(timestamp);
+    msg.setReceiverId(userid);
+    msg.payload()["fileId"]= file->id();
+    msg.payload()["fileName"]= file->fileName();
+    msg.payload()["fileSize"]= file->fileSize();
+    msg.payload()["sha256"]= file->fileSha256();
+     se->send(msg);
+   std::cout<<"send offline file notify "<<"fileId="<<file->id()<<std::endl;
 
-    msg.payload()["fileId"]=file->id();
-    msg.payload()["fileName"]=file->fileName();
-    msg.payload()["fileSize"]=file->fileSize();
-    msg.payload()["sha256"]=file->fileSha256();
-
-    se->send(msg);
-    return true;
+   }
 }

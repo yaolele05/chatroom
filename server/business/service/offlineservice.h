@@ -6,7 +6,7 @@ class OfflineService
     public:
     static OfflineService& instance();
     void sendOfflineMessage(Session* session);
-  
+    void sendOfflineFile( Session* se);
     private:
     OfflineService()=default;
     OfflineService(const OfflineService&)=delete;
@@ -14,7 +14,7 @@ class OfflineService
 
     void sendChatOffline(const OfflineMessage&offline,Session* se);
     void sendGroupOffline(const OfflineMessage& offline,Session* se);
-    bool sendFileOffline(const OfflineMessage&offline,Session* se);
+    
     
  
 

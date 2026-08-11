@@ -65,7 +65,7 @@ void Chatserver::onMessage(const TcpConnectionptr& conn,Buffer* buffer)
         }
         std::cout << "decode ok" << std::endl;
         
-         std::cout << "raw json = " << json << std::endl;
+         //std::cout << "raw json = " << json << std::endl;
         Message message;
         try
         {

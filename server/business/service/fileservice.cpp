@@ -15,6 +15,8 @@
 #include <unordered_map>
 #include <memory>
 #include <fstream>
+#include "../../model/filereceivermodel.h"
+#include "../../model/entity/filereceiver.h"
 FileService& FileService::instance()
 {
     static FileService service;
@@ -45,6 +47,10 @@ dispatcher.registerHandler(Messagetype::GroupFileStart,[]( const Message& messag
 {
    FileService::instance().fileAck(message,session);   
 });
+   dispatcher.registerHandler(Messagetype::FileDownloadRequest,[](const Message& message,Session* session)
+{
+   FileService::instance().downloadRequest(message,session);   
+});
 }
 void FileService::fileStart(const Message& msg,Session*se)
 {
@@ -73,6 +79,23 @@ void FileService::fileStart(const Message& msg,Session*se)
     
     int receiverId=payload.at("receiverId").get<int>();
     int groupId=payload.at("groupId").get<std::int64_t>();
+    if(groupId != 0)
+    {
+    GroupModel groupModel;
+
+    if(!groupModel.isGroupMember(groupId, senderId))
+    {
+        Message reply;
+        reply.setType(Messagetype::Error);
+        reply.setSequence(msg.sequence());
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] =
+            "sender is not group member";
+
+        se->send(reply);
+        return;
+    }
+    }
     std::string fileName=payload.at("fileName").get<std::string>();
     std::uint64_t fileSize=payload.at("fileSize").get<uint64_t>();
     std::string sha256=payload.at("sha256").get<std::string>();
@@ -135,85 +158,136 @@ void FileService::fileStart(const Message& msg,Session*se)
 
     task->offset = 0;
     receiveTasks_[file.id()] =std::move(task);
+
+
     if(groupId==0)
     {
-    auto receiver =SessionManager::instance().getSession(receiverId);
-    if(!receiver)
+         if(receiverId == senderId)
     {
-        std::cout<< "[FileService] receiver offline"<< " receiverId=" << receiverId<< std::endl;
         Message reply;
-
         reply.setType(Messagetype::Error);
         reply.setSequence(msg.sequence());
         reply.payload()["code"] = -1;
-        reply.payload()["message"] ="receiver offline";
+        reply.payload()["message"] = "cannot send file to yourself";
         se->send(reply);
         return;
     }
-        Message start;
-    start.setType(Messagetype::FileStart);
-    start.setSenderId(senderId);
-    start.setReceiverId(receiverId);
-    start.payload()["fileId"] =file.id();
-    start.payload()["fileName"] =file.fileName();
-    start.payload()["fileSize"] =file.fileSize();
-    start.payload()["sha256"] =file.fileSha256();
-    start.payload()["offset"] =0;
 
-    receiver->send(start);
+    FileReceiver receiverInfo;
 
-    std::cout<< "[FileService] send FILE_START"<< " fileId=" << file.id()<< " senderId=" << senderId<< " receiverId=" << receiverId<< " size=" << file.fileSize()<< std::endl;
+    receiverInfo.setFileId(file.id());
+    receiverInfo.setUserId(receiverId);
+    receiverInfo.setStatus(FileReceiver::Waiting);
+    receiverInfo.setCreateTime(
+        std::chrono::system_clock::now()
+    );
 
+    FileReceiverModel receiverModel;
+
+    if(!receiverModel.insert(receiverInfo))
+    {
+        model.remove(file.id());
+        Message reply;
+        reply.setType(Messagetype::Error);
+        reply.setSequence(msg.sequence());
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] = "create file receiver failed";
+
+        se->send(reply);
+        return;
     }
+
+    std::cout<< "[FileService] create file_receiver"<< " fileId=" << file.id()<< " receiverId=" << receiverId<< std::endl;
+   }
     else{
       GroupModel groupModel;
      
       auto members= groupModel.findGroupMembers(groupId);
       std::cout<<"group members size="<<members.size()<<std::endl;
+
+      bool receivercreatesuc=true;
+      int receivercount=0;
+      FileReceiverModel receiverModel;
       for(auto& member:members)
       {
         std::cout<<"member userid="<<member.userId()<<std::endl;
-        if(member.userId()==senderId)
+        int memberId=member.userId();
+        if(memberId==senderId)
         {
              std::cout<<"skip sender"<<std::endl;
 
             continue;
         }
-        auto receiver=SessionManager::instance().getSession(member.userId());
+        ++receivercount;
+         FileReceiver receiverInfo;
 
-        if(!receiver)
+        receiverInfo.setFileId(file.id());
+        receiverInfo.setUserId(member.userId());
+        receiverInfo.setStatus(FileReceiver::Waiting);
+        receiverInfo.setCreateTime(std::chrono::system_clock::now()
+        );
+
+        FileReceiverModel receiverModel;
+
+        if(!receiverModel.insert(receiverInfo))
         {
+            std::cout
+                << "[FileService] insert group file_receiver failed"
+                << " fileId=" << file.id()
+                << " userId=" << member.userId()
+                << std::endl;
 
-            continue;
+                receivercreatesuc=false;
+            break;
         }
-        Message start;
-        start.setType(Messagetype::GroupFileStart);
-        start.setSenderId(senderId);
-        start.setReceiverId(member.userId());
+           
+       
+        std::cout<< "[FileService] create group file_receiver"<< " fileId=" << file.id()<< " userId=" << member.userId()<< std::endl;
+     }
+     if(receivercount == 0)
+       {
+        std::cout
+            << "[FileService] group has no receivers"
+            << " groupId=" << groupId
+            << std::endl;
 
-        start.payload()["fileId"]=file.id();
-        start.payload()["groupId"]=groupId;
-        start.payload()["fileName"]=file.fileName();
-        start.payload()["fileSize"]=file.fileSize();
-        start.payload()["sha256"]=file.fileSha256();
-        start.payload()["offset"]=0;
-        receiver->send(start);
+        receivercreatesuc = false;
+       }
+        if(!receivercreatesuc)
+       {
+        std::cout
+            << "[FileService] rollback file receivers"
+            << " fileId=" << file.id()
+            << std::endl;
 
+        receiverModel.removeByFileId(file.id());
 
-        std::cout<< "[FileService] send GROUP FILE_START"<< " fileId="<< file.id()<< " userid="<< member.userId()<< std::endl;
-      }
+        // 删除 file
+        model.remove(file.id());
 
-    }
-        
-        
         Message reply;
-     reply.setType(Messagetype::MessageAck);
-     reply.setSequence(msg.sequence());
-         reply.payload()["code"]=0;
-         reply.payload()["fileId"]=file.id();
-         reply.payload()["offset"]=0;
+        reply.setType(Messagetype::Error);
+        reply.setSequence(msg.sequence());
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] =
+            "create file receivers failed";
 
-         se->send(reply);
+        se->send(reply);
+
+        return;
+      }
+   }
+    Message reply;
+   reply.setType(Messagetype::MessageAck);
+   reply.setSequence(msg.sequence());
+   reply.payload()["code"] = 0;
+   reply.payload()["fileId"] = file.id();
+   reply.payload()["offset"] = 0;
+   reply.payload()["stage"]="start";
+
+    se->send(reply);
+        
+     
 }
 void FileService::fileChunk(const Message& msg,Session* se)
 {
@@ -257,7 +331,18 @@ void FileService::fileChunk(const Message& msg,Session* se)
         se->send(reply);
         return;
     }
+    if(!it->second)
+    {
+    std::cout
+        << "[FileService] receive task is null"
+        << " fileId=" << fileId
+        << std::endl;
+    return;
+    }
     ReceiveTask& task = *it->second;
+   
+
+    //////////////
     if(task.file.senderId() != senderId)
     {
         Message reply;
@@ -327,6 +412,7 @@ void FileService::fileChunk(const Message& msg,Session* se)
      reply.payload()["code"]=0;
      reply.payload()["fileId"] = fileId;
      reply.payload()["offset"]=task.offset;
+     reply.payload()["stage"]="chunk";
 
      se->send(reply);
 
@@ -381,8 +467,7 @@ void FileService::fileFinish(const Message& msg,Session* se)
         reply.setType(Messagetype::Error);
         reply.setSequence(msg.sequence());
         reply.payload()["code"] = -1;
-        reply.payload()["message"] =
-            "file task not found";
+        reply.payload()["message"] ="file task not found";
 
         se->send(reply);
         return;
@@ -430,97 +515,182 @@ void FileService::fileFinish(const Message& msg,Session* se)
      }
 
     receiveTasks_.erase(it);
-    if(file->groupId()==0)
+
+     FileReceiverModel receiverModel;
+
+auto receivers = receiverModel.findByFileId(fileId);
+
+std::cout
+    << "[FileService] file receivers="
+    << receivers.size()
+    << " fileId=" << fileId
+    << std::endl;
+
+  for(auto& receiverInfo : receivers)
+  {
+    int receiverId = receiverInfo.userId();
+    int status = receiverInfo.status();
+
+    std::cout
+        << "[FileService] receiver"
+        << " fileId=" << fileId
+        << " receiverId=" << receiverId
+        << " status=" << status
+        << std::endl;
+    if(status == FileReceiver::Finished)
     {
-    auto receiver=SessionManager::instance().getSession(file->receiverId());
-    if(receiver)
-    {
-         sendFileToReceiver(*file, receiver);
+        std::cout
+            << "[FileService] receiver already finished"
+            << " fileId=" << fileId
+            << " receiverId=" << receiverId
+            << std::endl;
+
+        continue;
     }
-    
-      else
-     {
-      OfflineMessage offline;
-      offline.setUserId(file->receiverId());
-      offline.setMessageId(file->id());
-      offline.setType(OfflineType::File);
-      offline.setCreateTime(std::chrono::system_clock::now());
-      OfflineMessageModel offlinemodel;
-      offlinemodel.insert(offline);
-     }
-    }
-    else
+
+    if(status == FileReceiver::Downloading)
     {
-         GroupModel groupModel;
-      auto members= groupModel.findGroupMembers(file->groupId());
-      for(auto& member:members)
-      {
-        if(member.userId()==senderId)
-        {
-            continue;
-        }
-        auto receiver=SessionManager::instance().getSession(member.userId());
-        if(!receiver)
-        {
-             OfflineMessage offline;
-          offline.setUserId(member.userId());
-          offline.setMessageId(file->id());
-          offline.setType(OfflineType::File);
-          offline.setCreateTime(std::chrono::system_clock::now());
-          OfflineMessageModel offlinemodel;
-          offlinemodel.insert(offline);
-            continue;
-        }
-        else
-        {
-              sendFileToReceiver(*file, receiver);
-        }
-      }
+        std::cout
+            << "[FileService] receiver already downloading"
+            << " fileId=" << fileId
+            << " receiverId=" << receiverId
+            << std::endl;
+
+        continue;
+    }
+
+  
+    if(status != FileReceiver::Waiting)
+    {
+        std::cout
+            << "[FileService] unknown receiver status"
+            << " fileId=" << fileId
+            << " receiverId=" << receiverId
+            << " status=" << status
+            << std::endl;
+
+        continue;
     }
 
    
+    auto receiver =SessionManager::instance().getSession(receiverId);
+
+    if(!receiver)
+    {
+      
+        std::cout
+            << "[FileService] receiver offline"
+            << " fileId=" << fileId
+            << " receiverId=" << receiverId
+            << " keep Waiting"
+            << std::endl;
+
+        continue;
+    }
+
+  
+    if(!receiverModel.updateStatus(
+            fileId,
+            receiverId,
+            FileReceiver::Downloading))
+    {
+        std::cout
+            << "[FileService] update receiver status failed"
+            << " fileId=" << fileId
+            << " receiverId=" << receiverId
+            << std::endl;
+
+        continue;
+    }
+
+    std::cout<< "[FileService] receiver online"<< " fileId=" << fileId<< " receiverId=" << receiverId<< " Waiting -> Downloading"<< std::endl;
+
+   
+    sendFileToReceiver(*file, receiver);
+}
 
     Message ack;
     ack.setType(Messagetype::MessageAck);
     ack.setSequence(msg.sequence());
     ack.payload()["code"] = 0;
      ack.payload()["message"] = "success";
+     ack.payload()["fileId"]=fileId;
+     ack.payload()["stage"]="finish";
     se->send(ack);
   return;
 }
-void FileService::sendFileToReceiver(const FileInfo& file,const std::shared_ptr<UserSession>& receiver)
+void FileService::sendFileToReceiver(const FileInfo& file,const std::shared_ptr<Session>& receiver)
 {
-    if(receiver == nullptr)
+    if(!receiver)
     {
+        std::cout
+            << "[FileService] receiver is null"
+            << " fileId=" << file.id()
+            << std::endl;
         return;
-    } 
+    }
+
+    auto userSession =
+        std::dynamic_pointer_cast<UserSession>(receiver);
+
+    if(!userSession)
+    {
+        std::cout<< "[FileService] receiver is not UserSession"<< " fileId=" << file.id()<< std::endl;
+        return;
+    }
+
+    int receiverId = userSession->userid();
+      auto& receiverTasks = sendTasks_[file.id()];
+
+    // 防止同一个接收者重复创建发送任务
+    auto existing = receiverTasks.find(receiverId);
+
+    if(existing != receiverTasks.end())
+    {
+        std::cout<< "[FileService] send task already exists"<< " fileId=" << file.id()<< " receiverId=" << receiverId<< std::endl;
+        return;
+    }
+
     auto task = std::make_unique<SendTask>();
+
     task->fileId = file.id();
     task->file = file;
     task->offset = 0;
     task->waitingAck = false;
     task->finished = false;
+    task->receiver = receiver;
+
     task->stream.open(file.filePath(),std::ios::binary);
 
     if(!task->stream)
     {
-        std::cout<< "[FileService] open file failed: "<< file.filePath()<< std::endl;
+        std::cout
+            << "[FileService] open file failed: "<< file.filePath() << " fileId=" << file.id()<< " receiverId=" << receiverId<< std::endl;
+
         return;
     }
-    auto [it, inserted] =sendTasks_.emplace(file.id(),std::move(task));
+
+    auto [it, inserted] =
+        receiverTasks.emplace(
+            receiverId,
+            std::move(task)
+        );
+
     if(!inserted)
     {
-        std::cout<<"[FileService] send task already exists, fileId=" << file.id()<< std::endl;
+        std::cout<< "[FileService] insert send task failed"<< " fileId=" << file.id()<< " receiverId=" << receiverId<< std::endl;
         return;
     }
 
     SendTask& sendTask = *it->second;
 
-    sendTask.waitingAck = false;
-    sendNextChunk(sendTask, receiver.get());
-   std::cout<< "[FileService] send file start"<< " fileId=" << file.id() << " size=" << file.fileSize()<< std::endl;
+    std::cout<< "[FileService] create send task" << " fileId=" << file.id()<< " receiverId=" << receiverId<< " size=" << file.fileSize()<< std::endl;
+
+    sendNextChunk(sendTask);
+   
 }
-void FileService::fileAck(const Message& msg,Session* se)
+
+void FileService::fileAck(const Message& msg, Session* se)
 {
     if(se == nullptr)
     {
@@ -530,111 +700,180 @@ void FileService::fileAck(const Message& msg,Session* se)
     {
         return;
     }
+    auto userSession = dynamic_cast<UserSession*>(se);
+    if(!userSession)
+    {
+        return;
+    }
     const auto& payload = msg.payload();
-
     if(!payload.contains("fileId"))
     {
         return;
     }
-
     if(!payload.contains("offset"))
     {
         return;
     }
+    if(!payload.contains("stage"))
+    { 
+    return;
+    }
+     std::string stage =payload.at("stage").get<std::string>();
 
+      if(stage != "chunk")
+    {
+    std::cout << "[FileService] invalid file ack stage"<< " stage="<< stage<< std::endl;
+
+    return;
+     }
     uint64_t fileId =payload.at("fileId").get<uint64_t>();
     uint64_t offset =payload.at("offset").get<uint64_t>();
 
-    auto it = sendTasks_.find(fileId);
-    if(it == sendTasks_.end())
+    int receiverId = userSession->userid();
+    auto fileIt = sendTasks_.find(fileId);
+    if(fileIt == sendTasks_.end())
     {
-        std::cout<< "[FileService] send task not found"<< " fileId=" << fileId<< std::endl;
+        std::cout<< "[FileService] send task file not found"<< " fileId=" << fileId<< std::endl;
+
         return;
     }
 
-    SendTask& task = *it->second;
-    auto userSession = dynamic_cast<UserSession*>(se);
-    if(!userSession)
+    auto& receiverTasks = fileIt->second;
+    auto taskIt = receiverTasks.find(receiverId);
+
+    if(taskIt == receiverTasks.end())
     {
-    return;
+        std::cout<< "[FileService] send task receiver not found"<< " fileId=" << fileId<< " receiverId=" << receiverId<< std::endl;
+
+        return;
     }
 
-    bool permisson=false;
-    if(task.file.groupId()==0)
+    SendTask& task = *taskIt->second;
+
+    if(!task.receiver)
     {
-        permisson=task.file.receiverId()==userSession->userid();
+        std::cout<< "[FileService] receiver lost"<< " fileId=" << fileId<< " receiverId=" << receiverId<< std::endl;
+        return;
+    }
+
+    bool permission = false;
+
+    if(task.file.groupId() == 0)
+    {
+        permission =task.file.receiverId() == receiverId;
     }
     else
     {
         GroupModel model;
-        permisson=model.isGroupMember(task.file.groupId(),userSession->userid());
+        permission =model.isGroupMember(task.file.groupId(), receiverId);
     }
-    if(!permisson)
-    {
-         std::cout<< "[FileService] ACK permission denied"<< std::endl;
 
-    return;
+    if(!permission)
+    {
+        std::cout << "[FileService] ACK permission denied"<< " fileId=" << fileId << " receiverId=" << receiverId<< std::endl;
+        return;
     }
+
     if(task.finished)
     {
         return;
     }
-    
-     if(offset < task.offset ||offset > task.file.fileSize())
+
+    if(!task.waitingAck)
     {
-        std::cout<< "[FileService] invalid ACK offset"<< " fileId=" << fileId<< " current=" << task.offset<< " ack=" << offset<< std::endl;
+        std::cout<< "[FileService] unexpected ACK"<< " fileId=" << fileId<< " receiverId=" << receiverId<< std::endl;
         return;
     }
-      task.offset = offset;
-      task.waitingAck = false;
 
-   std::cout<< "[FileService] ACK"<< " fileId=" << fileId<< " offset=" << offset<< std::endl;
+    if(offset < task.offset ||offset > task.file.fileSize())
+    {
+        std::cout<< "[FileService] invalid ACK offset"<< " fileId=" << fileId<< " receiverId=" << receiverId<< " current=" << task.offset<< " ack=" << offset<< std::endl;
+        return;
+    }
+    task.offset = offset;
+    task.waitingAck = false;
 
+    std::cout << "[FileService] ACK" << " fileId=" << fileId<< " receiverId=" << receiverId<< " offset=" << offset<< std::endl;
+
+  
     if(task.offset == task.file.fileSize())
     {
-        Message finish;
+        int64_t groupId =task.file.groupId();
+        uint64_t completedFileId =task.file.id();
 
-        finish.setType(Messagetype::FileFinish);
+        FileReceiverModel receiverModel;
+
+        bool statusOk = receiverModel.updateStatus(completedFileId,receiverId,FileReceiver::Finished);
+
+        if(!statusOk)
+        {
+            std::cout<< "[FileService] update file_receiver status failed"<< " fileId=" << completedFileId<< " receiverId=" << receiverId<< std::endl;
+            return;
+        }       
+        Message finish;
+           if(groupId == 0)
+        {
+            finish.setType(Messagetype::FileFinish);
+        }
+        else
+        {
+            
+            finish.setType(Messagetype::FileFinish);
+        }
         finish.setSenderId(task.file.senderId());
-        finish.setReceiverId(task.file.receiverId());
+        finish.setReceiverId( receiverId);
+
         finish.payload()["fileId"] =task.file.id();
         finish.payload()["fileName"] =task.file.fileName();
         finish.payload()["fileSize"] =task.file.fileSize();
         finish.payload()["sha256"] =task.file.fileSha256();
+        task.receiver->send(finish);
+        task.finished =true;
 
-        se->send(finish);
-
-        task.finished = true;
-
-        std::cout<< "[FileService] send FILE_FINISH" << " fileId=" << fileId<< std::endl;
-
+        std::cout<< "[FileService] send FILE_FINISH"<< " fileId=" << fileId<< " receiverId=" << receiverId<< std::endl;
+        task.stream.close();
+        receiverTasks.erase(taskIt);
+        std::cout<< "[FileService] erase receiver task"<< " fileId=" << fileId<< " receiverId=" << receiverId<< std::endl;
+        if(receiverTasks.empty())
+        {
+            sendTasks_.erase(fileIt);
+            std::cout<< "[FileService] erase file send task"<< " fileId=" << fileId<< std::endl;
+        }
+        std::cout<< "[FileService] send FILE_FINISH"<< " fileId=" << fileId<< " receiverId=" << receiverId<< std::endl;
         return;
     }
-
-    sendNextChunk(task, se);
+    sendNextChunk(task);
 }
-void FileService::sendNextChunk(SendTask& task, Session* se)
+void FileService::sendNextChunk(SendTask& task)
 {
-     if(se == nullptr)
-        return;
-
+    if(!task.receiver)
+    {
+    std::cout<< "[FileService] receiver lost"<< std::endl;
+    return;
+    }
     if(task.finished)
         return;
+    auto userSession=std::dynamic_pointer_cast<UserSession>(task.receiver);
 
+    if(!userSession)
+    {
+        std::cout<<"[FIleService receiver is not Usersession]"<<"fileid:"<<task.file.id()<<std::endl;
+        return;
+    }
+    int receiverId=userSession->userid();
      // 文件已经全部发送
     if(task.offset >= task.file.fileSize())
     {
         Message finish;
         finish.setType(Messagetype::FileFinish);
         finish.setSenderId(task.file.senderId());
-        finish.setReceiverId(task.file.receiverId());
-
+        finish.setReceiverId(receiverId);
         finish.payload()["fileId"] = task.file.id();
         finish.payload()["fileName"] = task.file.fileName();
         finish.payload()["fileSize"] = task.file.fileSize();
         finish.payload()["sha256"] = task.file.fileSha256();
 
-        se->send(finish);
+        task.receiver->send(finish);
 
         task.finished = true;
 
@@ -668,16 +907,173 @@ void FileService::sendNextChunk(SendTask& task, Session* se)
     Message chunk;
     chunk.setType(Messagetype::FileChunk);
     chunk.setSenderId(task.file.senderId());
-
-   auto user =dynamic_cast<UserSession*>(se);
-   chunk.setReceiverId(user->userid());
+   chunk.setReceiverId(receiverId);
     auto& chunkPayload =chunk.payload();
     chunkPayload["fileId"] =task.file.id();
     chunkPayload["offset"] =task.offset;
-
     chunkPayload["size"] =static_cast<uint64_t>(n);
     chunkPayload["data"] =encoded;
-    se->send(chunk);
+    task.receiver->send(chunk);
     task.waitingAck = true;
     std::cout<< "[FileService] send chunk"<< " offset=" << task.offset<< "/" << task.file.fileSize()<< std::endl;
+}
+void FileService::downloadRequest(const Message& msg,Session*se)
+{
+    if(!se)
+    return;
+    if(!se->authenticated())
+    return;
+     auto userSession =dynamic_cast<UserSession*>(se);
+     if(!userSession)
+     return;
+
+      if(!msg.payload().contains("fileId"))
+    return;
+    auto fileId =msg.payload().at("fileId").get<int64_t>();
+   
+
+    FileModel model;
+    auto file =model.findById(fileId);
+    if(!file)
+    {
+        Message reply;
+        reply.setType(Messagetype::Error);
+        reply.setSequence(msg.sequence());
+        reply.payload()["code"]=-1;
+        reply.payload()["message"]="file not exist";
+        se->send(reply);
+        return;
+    }
+    if(!file->completed())
+    {
+        Message reply;
+        reply.setType(Messagetype::Error);
+        reply.setSequence(msg.sequence());
+        reply.payload()["code"]=-1;
+        reply.payload()["message"]="file not completed";
+        se->send(reply);
+        return;
+    }
+    bool pem=false;
+    int receiverId=userSession->userid();
+
+    if(file->groupId()==0)
+    {
+        pem=  file->receiverId()==receiverId;
+    
+    }
+    else
+   {
+    GroupModel gmodel;
+
+    pem=gmodel.isGroupMember(file->groupId(), receiverId);
+ 
+    }
+    if(!pem)
+    {
+        std::cout<<"[FileD=Service]download permission denied"<<"fileId="<<fileId<<"receiverId"<<receiverId<<std::endl;
+        Message reply;
+        reply.setType(Messagetype::Error);
+        reply.setSequence(msg.sequence());
+        reply.payload()["code"]=-1;
+        reply.payload()["message"]="download permission denied\n";
+        se->send(reply);
+        return;
+    }
+   
+
+    FileReceiverModel receiverModel;
+    auto receivers=receiverModel.findByFileId(fileId);
+    
+    FileReceiver* targetReceiver=nullptr;
+    for(auto& receiver:receivers)
+    {
+        if(receiver.userId()==receiverId)
+        {
+            targetReceiver=&receiver;
+            break;
+        }
+    }
+    if(targetReceiver ==nullptr)
+    {
+        std::cout<<"[FileService] file_receiver not found"<<std::endl;
+        Message reply;
+        reply.setType(Messagetype::Error);
+        reply.setSequence(msg.sequence());
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] ="file receiver not found";
+
+        se->send(reply);
+        return;
+
+    }
+
+    int status=targetReceiver->status();
+    if(status==FileReceiver::Finished)
+    {
+        Message reply;
+        reply.setType(Messagetype::Error);
+        reply.setSequence(msg.sequence());
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] ="file already download\n";
+
+        se->send(reply);
+        return;
+
+    }
+    if(status==FileReceiver::Downloading)
+    {
+        Message reply;
+        reply.setType(Messagetype::Error);
+        reply.setSequence(msg.sequence());
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] ="file already download\n";
+
+        se->send(reply);
+        return;
+    }
+    if(status!= FileReceiver::Waiting)
+    {
+        Message reply;
+        reply.setType(Messagetype::Error);
+        reply.setSequence(msg.sequence());
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] ="invalid file receiver status\n";
+
+        se->send(reply);
+        return;
+    }
+    if(!receiverModel.updateStatus(fileId,receiverId,FileReceiver::Downloading))
+    {
+        std::cout<<"[FileService] update file receiver status failed\n"<<"receuverId:"<<receiverId<<std::endl;
+        Message reply;
+        reply.setType(Messagetype::Error);
+        reply.setSequence(msg.sequence());
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] ="update file receiver status\n";
+
+    }
+     auto receiver =SessionManager::instance().getSession(receiverId);
+
+    if(!receiver)
+    {
+    
+        receiverModel.updateStatus(fileId,receiverId,FileReceiver::Waiting);
+        std::cout<< "[FileService] receiver session not found"<< " receiverId=" << receiverId<< std::endl;
+
+        return;
+    }
+    sendFileToReceiver(*file,receiver);
+    
+    Message ack;
+    ack.setType(Messagetype::MessageAck);
+    ack.setSequence(msg.sequence());
+    ack.payload()["code"] = 0;
+    ack.payload()["fileId"] =fileId;
+    ack.payload()["offset"] =0;
+    ack.payload()["message"] ="download started";
+
+    se->send(ack);
+
+
 }

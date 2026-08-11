@@ -20,7 +20,7 @@ class GroupMember
     {
         id_=id;
     }
-    int groupId() const
+    int64_t groupId() const
     {
         return groupId_;
     }
@@ -28,11 +28,11 @@ class GroupMember
     {
         groupId_=groupId;
     }
-    int userId() const
+    int64_t userId() const
     {
         return userId_;
     }
-    void setUserId(int userId)
+    void setUserId(int64_t userId)
     {
         userId_=userId;
     }
@@ -57,7 +57,7 @@ class GroupMember
 private:
     std::int64_t id_;
     std::int64_t groupId_;
-    int userId_;
+    std::int64_t userId_;
     GroupRole role_;
     std::chrono::system_clock::time_point createTime_;  
 

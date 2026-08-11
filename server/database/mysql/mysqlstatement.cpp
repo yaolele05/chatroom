@@ -28,8 +28,6 @@ bool MysqlStatement::prepare(const std::string_view sql)
     auto count=mysql_stmt_param_count(stmt_);
     binds_.assign(count,MYSQL_BIND{});
     values_.resize(count);
-  
-
     return true;
 
 }

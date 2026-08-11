@@ -47,14 +47,14 @@ bool MysqlClient::connected() const
 }
 bool MysqlClient::execute(std::string_view sql)///
 {
-        if(mysql_==nullptr)
-        return false;
+    if(mysql_==nullptr)
+    return false;
 
-        if(mysql_real_query(mysql_,sql.data(),static_cast<unsigned long> (sql.size()))!=0)
-        {
-            std::cerr<<mysql_error(mysql_)<<std::endl;
+    if(mysql_real_query(mysql_,sql.data(),static_cast<unsigned long> (sql.size()))!=0)
+    {
+     std::cerr<<mysql_error(mysql_)<<std::endl;
             return false;
-        }
+    }
    return true;
 }
 bool MysqlClient::beginTransaction()

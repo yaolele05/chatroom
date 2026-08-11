@@ -16,6 +16,7 @@
 #include "business/service/fileservice.h"
 #include "business/service/heartbeatservice.h"
 #include "business/service/offlineservice.h"
+#include "business/service/historyservice.h"
 #include "database/connectionpool/mysqlpool.h"
 #include "database/connectionpool/redispool.h"
 
@@ -45,7 +46,8 @@ int main()
     ChatService::instance().registerHandler();
     FileService::instance().registerHandler();
     HeartbeatService::instance().registerHandler();
-    // OfflineService::instance().registerHandler();
+    HistoryService::instance().registerHandler();
+
     EventLoop loop;
     InetAddress addr(8888);
     Chatserver server(&loop, addr);
