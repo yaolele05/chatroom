@@ -15,7 +15,7 @@ FriendService& FriendService::instance()
 }
 void FriendService::registerHandler()
 {
-    std::cout << "register Friend handler" << std::endl;
+    //std::cout << "register Friend handler" << std::endl;
     auto& dispatcher=BusinessDispatcher::instance();
    dispatcher.registerHandler(Messagetype::AddFriend,[](const Message& message,Session* session)
 {

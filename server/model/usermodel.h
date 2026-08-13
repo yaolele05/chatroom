@@ -14,10 +14,10 @@ class UserModel
 
     std::optional<User>findById(int userid);
     std::optional<User> findByName(const std::string& username);
-    
-
     std::vector<User> findAll();
-
+    std::optional<User> findByEmail(const std::string& email);
+    bool updatePassword(int32_t userId,const std::string& passwordHash);
+     
   private:
 
     User makeUser(const MysqlResult& result);

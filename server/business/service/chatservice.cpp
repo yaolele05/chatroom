@@ -18,7 +18,7 @@ ChatService& ChatService::instance()
 }
 void ChatService::registerHandler()
 {
-   std::cout<<"enter PrivateChat"<<std::endl;
+   
    BusinessDispatcher::instance().registerHandler(
       Messagetype::PrivateChat,[](const Message& message,Session*session)
       {

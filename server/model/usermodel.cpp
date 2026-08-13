@@ -9,9 +9,10 @@ User UserModel::makeUser(const MysqlResult& result)
     user.setId(result.get<int>(0));
     user.setUsername(result.get<std::string>(1));
     user.setPasswordHash(result.get<std::string>(2));
-    user.setNickname(result.get<std::string>(3));
-    user.setAvatar(result.get<std::string>(4));
-    user.setSignature(result.get<std::string>(5));
+    user.setEmail(result.get<std::string>(3));
+    user.setNickname(result.get<std::string>(4));
+    user.setAvatar(result.get<std::string>(5));
+    user.setSignature(result.get<std::string>(6));
   /*  user.setCreateTime(result.get<std::chrono::system_clock::time_point>(7));
     user.setUpdateTime(result.get<std::chrono::system_clock::time_point>(8));
    */
@@ -25,7 +26,7 @@ bool UserModel::insert( User& user)
         return false;
     }
     auto stmt=conn->prepare(R"(INSERT INTO users(
-        username,password_hash,nickname,avatar,signature)VALUES(?,?,?,?,?)
+        username,password_hash,email,nickname,avatar,signature)VALUES(?,?,?,?,?,?)
     )");
 
     if(!stmt)
@@ -35,9 +36,10 @@ bool UserModel::insert( User& user)
     }
     stmt->bind(0,user.username());
     stmt->bind(1,user.passwordHash());
-    stmt->bind(2,user.nickname());
-    stmt->bind(3,user.avatar());
-    stmt->bind(4,user.signature());
+    stmt->bind(2,user.email());
+    stmt->bind(3,user.nickname());
+    stmt->bind(4,user.avatar());
+    stmt->bind(5,user.signature());
 
     if(!stmt->execute())
     {
@@ -62,7 +64,7 @@ bool UserModel::update(const User& user)
 
     if(!stmt)
     {
-         MysqlPool::instance().getConnection();
+         MysqlPool::instance().releaseConnection(conn);
     return false;
     }
     stmt->bind(0,user.nickname());
@@ -102,6 +104,7 @@ std::optional<User> UserModel::findById(int userid)
    "id,"
    "username,"
    "password_hash,"
+   "email"
    "nickname,"
    "avatar,"
    "signature "
@@ -131,10 +134,10 @@ std::optional<User> UserModel::findById(int userid)
 }
 std::optional<User> UserModel::findByName(const std::string& username)
 {
-     std::cout<<"findByName username="<<username<<std::endl;
-     std::cout<<"before get mysql connection"<<std::endl;
+     //std::cout<<"findByName username="<<username<<std::endl;
+     //std::cout<<"before get mysql connection"<<std::endl;
     auto conn=MysqlPool::instance().getConnection();
-    std::cout<<"after get mysql connection"<<std::endl;
+    //std::cout<<"after get mysql connection"<<std::endl;
 
     if(!conn)
     {
@@ -149,6 +152,7 @@ std::optional<User> UserModel::findByName(const std::string& username)
         "id,"
         "username,"
          "password_hash,"
+         "email"
           "nickname,"
            "avatar,"
            "signature " 
@@ -199,6 +203,7 @@ std::vector<User> UserModel::findAll()
         "id,"
         "username,"
          "password_hash,"
+         "email"
           "nickname,"
            "avatar,"
            "signature " 
@@ -221,4 +226,62 @@ std::vector<User> UserModel::findAll()
 
     return users;
 
+}
+ std::optional<User> UserModel::findByEmail(const std::string& email)
+{
+    std::cout << "findByEmail email=" << email << std::endl;
+
+    auto conn = MysqlPool::instance().getConnection();
+
+    if(!conn)
+    {
+        std::cout << "get mysql connection failed" << std::endl;
+        return std::nullopt;
+    }
+
+    auto stmt = conn->prepare(  "SELECT " "id,"  "username," "password_hash,"  "email,""nickname," "avatar,"   "signature "
+        "FROM users "
+        "WHERE email=?"
+    );
+
+    if(!stmt)
+    {
+        std::cout << "prepare failed" << std::endl;
+        MysqlPool::instance().releaseConnection(conn);
+        return std::nullopt;
+    }
+
+    stmt->bind(0, email);
+    auto result = stmt->query();
+    if(result.fetch())
+    {
+        auto user = makeUser(result);
+        std::cout<< "find user by email id=" << user.id()<< " username=" << user.username()<< std::endl;
+        MysqlPool::instance().releaseConnection(conn);
+
+        return user;
+    }
+
+    MysqlPool::instance().releaseConnection(conn);
+    return std::nullopt;
+}
+bool UserModel::updatePassword(int userid,const std::string& passwordHash)
+{
+    auto conn = MysqlPool::instance().getConnection();
+    if(!conn)
+        return false;
+    auto stmt = conn->prepare(  "UPDATE users "  "SET password_hash=? "  "WHERE id=?"    );
+
+    if(!stmt)
+    {
+        MysqlPool::instance().releaseConnection(conn);
+        return false;
+    }
+    stmt->bind(0, passwordHash);
+    stmt->bind(1, userid);
+    bool ok = stmt->execute();
+
+    MysqlPool::instance().releaseConnection(conn);
+
+    return ok;
 }

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 
 find_package(OpenSSL REQUIRED)
-
+find_package(CURL REQUIRED)
 
 find_library(MYSQLCLIENT_LIB
     mysqlclient
@@ -56,6 +56,8 @@ target_link_libraries(chatserver_lib PUBLIC
     OpenSSL::Crypto
 
     pthread
+
+    CURL::libcurl
 )
 
 

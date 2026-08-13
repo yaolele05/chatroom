@@ -52,7 +52,7 @@ void Chatserver::onMessage(const TcpConnectionptr& conn,Buffer* buffer)
     while(true)
         {
         auto result = PacketCodec::decode(*buffer,json);
-        std::cout << "decode result=" << (int)result << std::endl;
+       // std::cout << "decode result=" << (int)result << std::endl;
         if(result == PacketCodec::DecodeResult::Needmoredata)
         {
             break;

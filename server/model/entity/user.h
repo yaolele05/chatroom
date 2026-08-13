@@ -37,7 +37,14 @@ int id() const
     {
         passwordHash_ = passwordHash;
     }
-
+   const std::string& email() const
+   {
+    return email_;
+   }
+   void setEmail(const std::string& email)
+   {
+       email_=email;
+   }
     const std::string& nickname() const
     {
         return nickname_;
@@ -88,6 +95,7 @@ private:
     int id_{0};
     std::string username_;
     std::string passwordHash_;
+    std::string email_;
    std::string nickname_;
   std::string avatar_;
     std::string signature_;
