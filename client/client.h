@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 #include "clientconnection.h"
-
+#include "filetransf.h"
 class EventLoop;
 class TcpClient;
 class FileTransfer;
@@ -40,6 +40,19 @@ class Client
      bool waitLoginResult();
      void privateHistory(uint32_t userid);
      void groupHistory(uint32_t groupid);
+     const std::vector<FileTransfer::PendingReceiveFile>&  pendingReceiveFiles() const;
+     //bool rejectFile(int64_t fileId);
+     void acceptFile(int64_t fileId);
+     //showFileNotification();
+     public:
+    const nlohmann::json& friends() const
+    {
+        return friends_;
+    }
+    const nlohmann::json& groups() const
+    {
+        return groups_;
+    }
     private:
     void onMessage(const Message& message);
     void handleLogin(const Message& msg);
@@ -53,8 +66,8 @@ class Client
     void handleHeartbeat(const Message& msg);
     void handleRegister(const Message& msg);
     void handleHistory(const Message& msg);
-    void handleOfflineFileNotify(const Message& msg);
     void handlerequestDownload(int64_t fileId);
+    void handleOfflineFileNotify(const Message& msg);
    private:
    EventLoop* loop_;
    std::unique_ptr<TcpClient> tcpClient_;
@@ -67,5 +80,8 @@ class Client
    bool login_{false};
    bool loginFinished_{false};
    std::mutex loginMutex_;
-std::condition_variable loginCv_;
+   std::condition_variable loginCv_;
+
+    nlohmann::json friends_;
+    nlohmann::json groups_;
 };

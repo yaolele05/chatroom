@@ -73,8 +73,7 @@ void Client::addFriend(uint32_t friendId)
 {
     if(!connection_)
     return;
-
-    std::cout<<"send friendId="<<friendId<<std::endl;
+     
 
     Message msg;
     msg.setType(Messagetype::AddFriend);
@@ -88,7 +87,7 @@ void Client::deleteFriend(uint32_t friendId)
 {
        if(!connection_)
     return;
-
+    
     Message msg;
     msg.setType(Messagetype::DeleteFriend);
     msg.setSequence(sequence_++);
@@ -270,6 +269,7 @@ void Client::onMessage(const Message& msg)
 {
     std::cout << "client receive message type="<< static_cast<int>(msg.type())<< std::endl;
 
+    //std::cout << "[Client] payload = "<< msg.payload().dump(4)<< std::endl;
    switch(msg.type())
    {
     case Messagetype::RegisterResponse: handleRegister(msg); break;
@@ -355,9 +355,10 @@ void Client::onMessage(const Message& msg)
     handleHistory(msg);
     break;
     case Messagetype::OfflineFileNotify:
-    handleOfflineFileNotify(msg);
+    {
+     handleOfflineFileNotify(msg);
     break;
-   
+    }
 
     default:
     std::cout<<"unknow message type"<<std::endl;
@@ -470,29 +471,28 @@ void Client::handleFriend(const Message& msg)
     }
     case Messagetype::FriendListResponse:
     {
-        if(!payload.contains("friends") ||
-       !payload["friends"].is_array())
+        if(!payload.contains("friends") || !payload["friends"].is_array())
     {
         std::cout << "好友列表为空" << std::endl;
         break;
     }
-    const auto& friends = payload["friends"];
-    if(friends.empty())
+     friends_= payload["friends"];
+    if(friends_.empty())
     {
         std::cout << "你还没有好友" << std::endl;
         break;
     }
     std::cout << "\n========== 好友列表 ==========\n";
-    for(const auto& friendUser : friends)
+    for(const auto& friendUser : friends_)
     {
            bool online = friendUser.value("online", false);
-        std::cout<< "id: " << friendUser.value("id", 0)<< "\nusername: " << friendUser.value("username", "")<< "\nnickname: " << friendUser.value("nickname", "")<< "\navatar: " << friendUser.value("avatar", "")
-        << "\nsignature: " << friendUser.value("signature", "")
-        << "\nstatus: " << friendUser.value("status", 0)
+        std::cout<< "id: " << friendUser.value("id", 0)<< "\nusername: " << friendUser.value("username", "")<< "\nnickname: " << friendUser.value("nickname", "")<< "\nstatus: " << friendUser.value("status", 0)
         << "\nonline: " << (online ? "在线" : "离线")<< '\n'
          << "\n-----------------------------\n";
     }
     std::cout << "==============================\n";
+    std::cout << "\n0. 返回\n";
+    std::cout << "请选择好友ID：" << std::flush;
     break;
     }
     
@@ -598,26 +598,29 @@ void Client::handleGroupList(const Message& msg)
     int code = payload.value("code", -1);
     if(code != 0)
     {
-        std::cout << "获取群列表失败 " << payload.value("message", "") << std::endl;return;
+        std::cout << "获取群列表失败 " << payload.value("message", "") << std::endl;
+        return;
     }
     if(!payload.contains("groups") ||!payload["groups"].is_array())
     {
         std::cout << "群列表为空" << std::endl;
         return;
     }
-    const auto& groups = payload["groups"];
-    if(groups.empty())
+   groups_ = payload["groups"];
+    if(groups_.empty())
     {
         std::cout << "你没加入任何群组" << std::endl;
         return;
     }
     std::cout << "\n========== 我的群组 ==========\n";
-    for(const auto& group : groups)
+    for(const auto& group : groups_)
     {
         std::cout<< "groupId: "<< group.value("groupId", 0) << "\nname: "<< group.value("name", "")<< "\ndescription: "<< group.value("description", "")<< "\nownerId: "<< group.value("ownId", 0)
         << "\n-----------------------------\n";
     }
     std::cout << "==============================\n";
+    std::cout << "\n0. 返回\n";
+    std::cout<<"请选择群ID："<<std::flush;
 }
 
 bool Client::waitLoginResult()
@@ -659,26 +662,7 @@ void Client::handleHistory(const Message& msg)
     std::cout<<"==========================\n";
 
 }
-void Client::handleOfflineFileNotify(const Message& msg)
-{
 
-auto& payload = msg.payload();
-auto fileId =payload["fileId"].get<int64_t>();
-auto senderId =msg.senderId();
-auto fileName =payload["fileName"].get<std::string>();
-auto fileSize =payload["fileSize"].get<uint64_t>();
- 
- bool ok= fileTransfer_->createReceiveTask(fileId,fileName,fileSize);
-
- if(ok)
- {
-     handlerequestDownload(fileId);
-     std::cout<<"收到离线文件"<<"\nfileId="<<fileId<<"\n发送者="<<senderId<<"\n文件名="<<fileName<<"\n大小="<<fileSize<<std::endl;
-
- }
-  std::cout<<"[client] create receivertask failed\n";
-
-}
 void Client::handlerequestDownload(int64_t fileId)
 {
     if(!connection_)
@@ -696,4 +680,43 @@ void Client::handlerequestDownload(int64_t fileId)
 
     connection_->send(msg);
 }
+/*
+void Client::handleOfflineFileNotify(const Message& msg)
+{
+
+auto& payload = msg.payload();
+auto fileId =payload["fileId"].get<int64_t>();
+auto senderId =msg.senderId();
+auto fileName =payload["fileName"].get<std::string>();
+auto fileSize =payload["fileSize"].get<uint64_t>();
  
+ bool ok= fileTransfer_->createReceiveTask(fileId,fileName,fileSize);
+
+ if(ok)
+ {
+     handlerequestDownload(fileId);
+     std::cout<<"收到离线文件"<<"\nfileId="<<fileId<<"\n发送者="<<senderId<<"\n文件名="<<fileName<<"\n大小="<<fileSize<<std::endl;
+
+ }
+ else
+ {
+  std::cout<<"[client] create receivertask failed\n";
+ }
+}
+ */
+void Client::handleOfflineFileNotify(const Message& msg)
+{
+
+  fileTransfer_->handleOfflineFileNotify(msg);
+}
+const std::vector<FileTransfer::PendingReceiveFile>& Client::pendingReceiveFiles() const
+{
+    return fileTransfer_->pendingReceiveFiles();
+}
+
+void Client::acceptFile(int64_t fileId)
+{
+    if(!fileTransfer_)
+        return;
+    fileTransfer_->acceptFile(fileId);
+}

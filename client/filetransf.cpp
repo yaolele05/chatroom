@@ -6,6 +6,7 @@
 #include <atomic>
 #include "../common/security/crypto/sha256.h"
 #include "../common/security/crypto/base64.h"
+#include <algorithm>//removePendingReceiveFile(int64_t fileId)
 FileTransfer::FileTransfer(std::shared_ptr<ClientConnection> conn):connection_(std::move(conn))
 {
 
@@ -133,12 +134,7 @@ void FileTransfer::sendChunks(uint64_t fileId,uint64_t offset)
     }
     if(offset > task.filesize)
     {
-        std::cout
-            << "[FileTransfer] invalid offset"
-            << " offset=" << offset
-            << " filesize=" << task.filesize
-            << std::endl;
-
+        std::cout<< "[FileTransfer] invalid offset"<< " offset=" << offset<< " filesize=" << task.filesize<< std::endl;
         return;
     }
     if(offset==task.filesize)
@@ -198,12 +194,25 @@ void FileTransfer::sendChunks(uint64_t fileId,uint64_t offset)
 }
 bool FileTransfer::sendImage(uint32_t receiverId, const std::string& filename)
 {
-    return sendPrivateFile(receiverId,filename);
+    return sendPrivateFile(receiverId,filename);///还要该群？
 }
 void FileTransfer::handleFileStart(const Message& msg)
 {
      uint64_t fileId = msg.payload()["fileId"];
-
+     bool accepted = false;
+    for(const auto& file : pendingReceiveFiles_)
+   {
+    if(file.fileId == fileId)
+    {
+        accepted = file.accepted;
+        break;
+    }
+   }
+   if(!accepted)
+   {
+    std::cout<< "[FileTransfer] "<< "unexpected FileStart"<< " fileId=" << fileId<< std::endl;
+    return;
+   }
     ReceiveTask task;
     task.filename = msg.payload()["fileName"];
     task.filesize =msg.payload()["fileSize"];
@@ -226,9 +235,8 @@ void FileTransfer::handleFileStart(const Message& msg)
    receiveTasks_.emplace(fileId,std::move(task));
     std::cout<< "[FileTransfer] start receive "<< "fileId=" << fileId<< " filename="<< msg.payload()["fileName"]<< " size="<< msg.payload()["fileSize"]<< std::endl;
 
-    // 告诉服务器：
-    // 文件接收任务已经创建好了，
-    // 从 offset=0 开始发送。
+   
+    //// 告诉服务器：文件接收任务已经创建好了，从 offset=0 开始发送。
     Message ack;
     ack.setType(Messagetype::MessageAck);
     ack.setSequence(msg.sequence());
@@ -328,7 +336,7 @@ void FileTransfer::handleFileFinish(const Message& msg)
        std::cout<< "[FileTransfer] missing sha256"<< std::endl;
        return;
      }
-    if(expectedSha256.empty()|| actualSha256 != expectedSha256)
+    if( actualSha256 != expectedSha256)
     {
        std::cout<< "[FileTransfer] sha256 verify failed"<< std::endl;
          return;
@@ -338,7 +346,16 @@ void FileTransfer::handleFileFinish(const Message& msg)
       std::cout<< "[FileTransfer] path: "<< task.filepath<< std::endl;
       std::cout<< "[FileTransfer] expected sha256: "<< expectedSha256<< std::endl;
       std::cout<< "[FileTransfer] actual sha256: "<< actualSha256<< std::endl;
-      
+      auto pendingIt =std::find_if(pendingReceiveFiles_.begin(),pendingReceiveFiles_.end(),[fileId](const PendingReceiveFile& file)
+      {
+        return file.fileId == fileId;
+      }
+    );
+
+    if(pendingIt != pendingReceiveFiles_.end())
+    {
+    pendingReceiveFiles_.erase(pendingIt);
+    }
      
    receiveTasks_.erase(it);
     
@@ -486,14 +503,16 @@ void FileTransfer::requestDownload(int64_t fileId)
     connection_->send(msg);
     std::cout<< "[FileTransfer] request download "<< "fileId="<< fileId<< std::endl;
  }
- bool FileTransfer::createReceiveTask(uint64_t fileId,const std::string& filename,uint64_t filesize)
+ bool FileTransfer::createReceiveTask(uint64_t fileId,const std::string& filename,uint64_t filesize,const std::string& sha256)
 {
+  std::filesystem::create_directories(saveDirectory_);
     ReceiveTask task;
     task.fileId = fileId;
     task.filename = filename;
     task.filesize = filesize;
     task.received = 0;
-    task.filepath ="downloads/" + filename;
+    task.sha256 = sha256;
+    task.filepath =(std::filesystem::path(saveDirectory_) / filename).string();
     task.file.open(task.filepath, std::ios::binary | std::ios::out | std::ios::trunc);
     if(!task.file)
     {
@@ -504,4 +523,70 @@ void FileTransfer::requestDownload(int64_t fileId)
     receiveTasks_.emplace(fileId,std::move(task));
     std::cout<< "[FileTransfer] create receive task"<< " fileId=" << fileId<< " filename=" << filename<< " filesize=" << filesize<< std::endl;
     return true;
+}
+void FileTransfer::handleOfflineFileNotify(const Message& msg)//处理接收文件
+{
+    const auto& payload=msg.payload();
+    if(!payload.contains("fileId")||!payload.contains("fileName")|| !payload.contains("fileSize"))
+    {
+      std::cout <<"[FileTransfer] invilid file notify"<<std::endl;
+      return;
+    }
+    PendingReceiveFile file;
+    file.fileId=payload["fileId"].get<int64_t>();
+    file.senderId=msg.senderId();
+    file.receiverId=msg.receiverId();
+    file.filename=payload["fileName"].get<std::string>();
+    file.groupId=payload.value("groupId",0);
+    file.filesize=payload["fileSize"].get<uint64_t>();
+    file.sha256=payload.value("sha256","");
+    file.accepted=false;
+    pendingReceiveFiles_.push_back(file);
+    
+  }
+  const std::vector<FileTransfer::PendingReceiveFile>&FileTransfer::pendingReceiveFiles() const
+{
+    return pendingReceiveFiles_;
+}
+/*bool FileTransfer::removePendingReceiveFile(int64_t fileId)
+{
+    auto it = std::find_if(pendingReceiveFiles_.begin(),pendingReceiveFiles_.end(),[fileId](const PendingReceiveFile& file)
+        {
+            return file.fileId == fileId;
+        }
+    );
+
+    if(it == pendingReceiveFiles_.end())
+    {
+        return false;
+    }
+    pendingReceiveFiles_.erase(it);
+    return true;
+}*/
+void FileTransfer::acceptFile(int64_t fileId)
+{
+    for( auto& file : pendingReceiveFiles_)
+    {
+      if(file.fileId != static_cast<uint64_t>(fileId))
+        continue;
+      if(file.fileId == fileId)
+      {
+      if(file.accepted)
+      {
+        std::cout<< "[FileTransfer] "<< "file already accepted" << std::endl;
+        return;
+      }
+      if(!createReceiveTask(file.fileId,file.filename,file.filesize,file.sha256))
+      {
+        std::cout << "[FileTransfer] "<< "create receive task failed"<< " fileId=" << file.fileId << std::endl;
+          return;
+      }
+
+       file.accepted = true;
+      requestDownload(fileId);
+     std::cout<< "[FileTransfer] "<< "accept file"<< " fileId=" << fileId<< std::endl;
+            return;
+        }
+    }
+    std::cout<< "[FileTransfer] "<< "pending file not found" << " fileId=" << fileId << std::endl;
 }

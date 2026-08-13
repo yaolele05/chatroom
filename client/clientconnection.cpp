@@ -132,7 +132,7 @@ void ClientConnection::handleRead()
         {
         std::string json;
         PacketCodec::DecodeResult result=PacketCodec::decode(*inputBuffer_,json);
-         std::cout<<"packet decode result="<<static_cast<int>(result)<<" json size="<<json.size()<<" readable="<<inputBuffer_->readableBytes()<<std::endl;
+        // std::cout<<"packet decode result="<<static_cast<int>(result)<<" json size="<<json.size()<<" readable="<<inputBuffer_->readableBytes()<<std::endl;
 
         switch(result)
         {
