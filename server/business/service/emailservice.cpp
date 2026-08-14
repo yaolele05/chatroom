@@ -14,6 +14,13 @@ bool EmailService::send(const std::string& to,const std::string& subject,const s
 {
     const char* username=std::getenv("CHATROOM_SMTP_USER");
     const char* password=std::getenv("CHATROOM_SMTP_PASSWORD");
+    std::cout << "[EmailService] username="
+          << (username ? username : "NULL")
+          << std::endl;
+
+    std::cout << "[EmailService] password="
+          << (password ? "SET" : "NULL")
+          << std::endl;
     if(username==nullptr || password==nullptr)
     {
         std::cerr<<"[EmailService]SMTP environment "<<"variables not configured"<<std::endl;
@@ -27,6 +34,8 @@ bool EmailService::send(const std::string& to,const std::string& subject,const s
         std::cout<<"[EmailService] curl init failed"<<std::endl;
         return false;
     }
+
+   curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     curl_easy_setopt(curl, CURLOPT_PROXY, "");
     std::string from="<"+username_+">";
     std::string recipient="<"+to+">";
@@ -50,6 +59,7 @@ bool EmailService::send(const std::string& to,const std::string& subject,const s
     curl_easy_setopt(curl,CURLOPT_URL,smtpServer_.c_str());
     curl_easy_setopt(curl,CURLOPT_USERNAME,username_.c_str());
     curl_easy_setopt(curl,CURLOPT_PASSWORD,password_.c_str());
+    curl_easy_setopt(curl, CURLOPT_LOGIN_OPTIONS, "AUTH=LOGIN");
     curl_easy_setopt( curl,CURLOPT_MAIL_FROM,from.c_str());
     struct curl_slist* recipients = nullptr;
     recipients = curl_slist_append(recipients,recipient.c_str());
