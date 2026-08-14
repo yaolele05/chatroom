@@ -9,6 +9,7 @@
 #include "../../session/usersession.h"
 #include "../../session/sessionmanager.h"
 #include "../../../common/protocol/message.h"
+#include "emailservice.h"
 class UserSession;
 
 class LoginService
@@ -23,7 +24,7 @@ class LoginService
     void sendRegisterCode(const Message&msg,Session* se);
     void sendLoginCode(const Message& msg,Session* se);
     void sendResetCode(const Message& msg,Session* se);
-
+     void resetPassword(const Message& msg,Session* se);
 
 
     private:
