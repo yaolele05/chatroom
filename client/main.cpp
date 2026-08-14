@@ -41,9 +41,10 @@ void loginMenu(Client& client)
 
 ======== 聊天室 ========
 
-1. 登陆
-
-2. 注册
+1. 密码登录
+2. 邮箱验证码登录
+3. 注册
+4. 找回密码
 
 0. 退出
 
@@ -62,16 +63,16 @@ void loginMenu(Client& client)
       {
         case 1:
         {
-            std::string name;
+            std::string username;
             std::string pwd;
 
             std::cout<<"请输入用户名：";
-            std::cin>>name;///记得加限制字数
+            std::cin>>username;///记得加限制字数
             std::cout<<"请输入密码：";
             std::cin>>pwd;
             
-            client.login(name,pwd);
-            if(client.waitLoginResult())
+            client.loginByPassword(username,pwd);
+            if(client.waitingLoginResult())
             {
                 chatMenu(client);
             }
@@ -80,17 +81,113 @@ void loginMenu(Client& client)
         }
         case 2:
         {
-            std::string user;
-            std::string pwd;
-            std::cout<<R"(========注册新用户========)";
-            std::cout<<"\n 请输入你的用户名：";
-            std::cin>>user;
-            std::cout<<"请输入你的密码：";
-            std::cin>>pwd;
-            client.registerUser(user,pwd);
+            std::string email;
+            std::string code;
+            std::cout<<"请输入邮箱：";
+            std::cin>>email;
+              std::cout<<"正在发送验证码......\n";
+              client.sendLoginCode(email);
+              if(!client.waitingLogincodeResult())
+              {
+                std::cout<<"验证码发送失败，请稍后再试。\n";
+                break;
+              }
+
+              std::cout<<"验证码已经发送，请检查邮箱。\n";
+              std::cout<<"请输入验证码：";
+              std::cin>>code;
+              client.loginByCode(email,code);
+              if(client.waitingLoginResult())
+              {
+                chatMenu(client);
+
+              }
+
+              break;
+        }
+       case 3:
+         {
+                std::string username;
+                std::string password;
+                std::string email;
+                std::string code;
+
+                std::cout << "请输入用户名：";
+                std::cin >> username;
+
+                std::cout << "请输入密码：";
+                std::cin >> password;
+
+                std::cout << "请输入邮箱：";
+                std::cin >> email;
+
+                std::cout << "正在发送验证码......\n";
+                client.sendRegisterCode(email);
+
+                if(!client.waitRegisterCodeResult())
+                {
+                    std::cout<< "验证码发送失败，请稍后再试。\n";
+                    break;
+                }
+
+                std::cout<< "验证码已经发送，请检查邮箱。\n";
+                std::cout << "请输入验证码：";
+                std::cin >> code;
+
+                client.registerUser(username,password,email, code);
+                if(client.waitRegisterResult())
+                {
+                    std::cout
+                        << "注册成功，请返回登录。\n";
+
+                    break;
+                }
+
+                std::cout<< "注册失败，请检查用户名、邮箱或验证码。\n";
+
+                break;
+            } 
+         case 4:
+        {
+             std::string email;
+            std::string code;
+            std::string newpassword;
+            std::string conpassword;
+            std::cout<<"========找回密码========\n";
+            std::cout<<"请输入注册邮箱："<<std::endl;
+            std::cin>>email;
+            std::cout<<"正在发送验证码......\n";
+            client.sendResetCode(email);
+            if(!client.waitResetCodeResult())
+            {
+                  std::cout<<"验证码发送失败，请稍后再试。\n";
+                break;
+            }
+            std::cout<<"验证码已经发送，请检查邮箱。\n";
+              std::cout<<"请输入验证码：";
+              std::cin>>code;
+              std::cout<<"请输入新密码：";
+              std::cin>>newpassword;
+              std::cout<<"请再次输入新密码:";
+              std::cin>>conpassword;
+              if(newpassword!=conpassword)
+              {
+                 std::cout<<"两次输入的新密码不一样,请重试\n";
+                 break;
+              }
+              if(newpassword.size()<6)
+              {
+                std::cout<<"密码不能小于6位，请重新输入\n";
+                break;
+              }
+            client.resetPassword(email,code,newpassword);
+            if(client.waitResetPasswordResult()==true)
+            {
+                std::cout<<"重置密码成功，请重新登录！\n";
+            }
+            
             break;
         }
-
         case 0:
         {
             client.disconnect();
