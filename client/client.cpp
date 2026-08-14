@@ -3,7 +3,7 @@
 #include "../minimuduo/net/eventloop.h"
 #include <iostream>
 #include <algorithm>
-
+#include "../common/protocol/Jsoncodec.h"
 Client::Client(EventLoop* loop):loop_(loop),tcpClient_(std::make_unique<TcpClient>(loop))
 {
 
@@ -32,7 +32,8 @@ bool Client::connect(const std::string& ip, uint16_t port)
     fileTransfer_ =std::make_unique<FileTransfer>(connection_);
     return true;
 }
-void Client::login(const std::string& username,const std::string& password)
+
+void Client::loginByPassword(const std::string& username, const std::string& password)
 {
     {
          std::lock_guard<std::mutex> lock(loginMutex_);
@@ -41,27 +42,180 @@ void Client::login(const std::string& username,const std::string& password)
     }
     if(!connection_)
     return;
+    Message msg;
 
+    msg.setType(Messagetype::Login);
+
+    msg.payload()["loginType"] = "password";
+    msg.payload()["username"] = username;
+    msg.payload()["password"] = password;
+
+    connection_->send(msg);
+}
+void Client::sendLoginCode(const std::string& email)
+{
+    {
+        std::lock_guard<std::mutex> lock(loginCodeMutex_);
+
+        loginCodeFinished_ = false;
+        loginCodeResult_ = false;
+    }
+    if(!connection_)
+        return;
+    Message msg;
+    msg.setType(Messagetype::SendLoginCode);
+    msg.payload()["email"] = email;
+    connection_->send(msg);
+}
+void Client::loginByCode(const std::string& email,const std::string& code)
+{
+    {
+        std::lock_guard<std::mutex> lock(loginMutex_);
+
+        loginFinished_ = false;
+        loginResult_ = false;
+        login_ = false;
+    }
+
+    if(!connection_)
+        return;
     Message msg;
     msg.setType(Messagetype::Login);
-    msg.setSequence(sequence_++);
-    msg.setSenderId(0);
-    msg.setTimestamp(time(nullptr));
-    auto& payload=msg.payload();
-    payload["username"]=username;
-    payload["password"]=password;
+    msg.payload()["loginType"] = "code";
+    msg.payload()["email"] = email;
+    msg.payload()["code"] = code;
+
     connection_->send(msg);
+}
+void Client::sendRegisterCode(const std::string& email)
+{
+    {
+        std::lock_guard<std::mutex> lock(registerCodeMutex_);
+
+        registerCodeFinished_ = false;
+        registerCodeResult_ = false;
+    }
+
+    if(!connection_)
+        return;
+    Message msg;
+    msg.setType(Messagetype::SendRegisterCode);
+    msg.payload()["email"] = email;
+    connection_->send(msg);
+}
+
+
+void Client::sendResetCode(const std::string& email)
+{
+    {
+        std::lock_guard<std::mutex> lock(resetCodeMutex_);
+
+        resetCodeFinished_ = false;
+        resetCodeResult_ = false;
+    }
+
+    if(!connection_)
+        return;
+
+    Message msg;
+    msg.setType(Messagetype::SendResetCode);
+    msg.payload()["email"] = email;
+
+
+    std::cout << "[Client] reset code type="
+              << static_cast<int>(msg.type())
+              << std::endl;
+
+    std::cout << "[Client] reset code json="
+              << JsonCodec::encode(msg)
+              << std::endl;
+    connection_->send(msg);
+}
+
+void Client::resetPassword(const std::string& email,const std::string& code,const std::string& newPassword)
+{
+    {
+        std::lock_guard<std::mutex> lock(resetPasswordMutex_);
+
+        resetPasswordFinished_ = false;
+        resetPasswordResult_ = false;
+    }
+    if(!connection_)
+        return;
+    Message msg;
+    msg.setType(Messagetype::ResetPassword);
+    msg.payload()["email"] = email;
+    msg.payload()["code"] = code;
+    msg.payload()["newPassword"] = newPassword;
+    connection_->send(msg);
+}
+bool Client::waitingLoginResult()
+{
+    std::unique_lock<std::mutex> lock(loginMutex_);
+    loginCv_.wait(lock, [this] {return loginFinished_; });
+    loginFinished_ = false;
+    return loginResult_;
+}
+
+bool Client::waitingLogincodeResult()
+{
+    std::unique_lock<std::mutex> lock(loginCodeMutex_);
+    loginCodeCv_.wait(lock,[this]{return loginCodeFinished_;});
+    loginCodeFinished_=false;
+    return loginCodeResult_;
+
+}
+bool Client::waitRegisterResult()
+{
+    std::unique_lock<std::mutex> lock(registerMutex_);
+
+    registerCv_.wait(lock, [this] {return registerFinished_;});
+
+    registerFinished_ = false;
+
+    return registerResult_;
+}
+bool Client::waitRegisterCodeResult()
+{
+    std::unique_lock<std::mutex> lock(registerCodeMutex_);
+
+    registerCodeCv_.wait(lock, [this] {return registerCodeFinished_;});
+    registerCodeFinished_ = false;
+    return registerCodeResult_;
+}
+
+bool Client::waitResetCodeResult()
+{
+    std::unique_lock<std::mutex> lock(resetCodeMutex_);
+
+    resetCodeCv_.wait(lock, [this] {
+        return resetCodeFinished_;
+    });
+
+    resetCodeFinished_ = false;
+
+    return resetCodeResult_;
+}
+bool Client::waitResetPasswordResult()
+{
+    std::unique_lock<std::mutex> lock(resetPasswordMutex_);
+
+    resetPasswordCv_.wait(lock, [this] {
+        return resetPasswordFinished_;
+    });
+
+    resetPasswordFinished_ = false;
+
+    return resetPasswordResult_;
 }
 void Client::logout()
 {
     if(!connection_)
     return;
-
     if(!login_)
     {
         return;
     }
-
     Message msg;
     msg.setType(Messagetype::Logout);
     msg.setSequence(sequence_++);
@@ -181,23 +335,7 @@ void Client::sendImage(uint32_t userId,const std::string& filename)
     sendPrivateFile(userId,filename);
 }
 
-void Client::registerUser(const std::string& username,const std::string& password)
-{
-    if(!connection_)
-    {
-        return;
-    }
-    Message msg;
-    msg.setType(Messagetype::Register);
-    msg.setSequence(sequence_++);
-    msg.setSenderId(0);
-    msg.setTimestamp(time(nullptr));
 
-    auto& payload = msg.payload();
-    payload["username"] = username;
-    payload["password"] = password;
-    connection_->send(msg);
-}
 
 bool Client ::isLogin() const
 {
@@ -275,6 +413,82 @@ void Client::onMessage(const Message& msg)
     case Messagetype::RegisterResponse: handleRegister(msg); break;
     case Messagetype::LoginResponse:handleLogin(msg);
     break;
+    case Messagetype::SendLoginCodeResponse:
+    {
+            bool success = false;
+
+            if(msg.payload().contains("success"))
+            {
+                success =msg.payload()["success"].get<bool>();
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(loginCodeMutex_);
+
+                loginCodeResult_ = success;
+                loginCodeFinished_ = true;
+            }
+            loginCodeCv_.notify_one();
+            break;
+        }
+     case Messagetype::SendRegisterCodeResponse:
+        {
+            bool success = false;
+
+            if(msg.payload().contains("success"))
+            {
+                success =msg.payload()["success"].get<bool>();
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(registerCodeMutex_);
+
+                registerCodeResult_ = success;
+                registerCodeFinished_ = true;
+            }
+
+            registerCodeCv_.notify_one();
+            break;
+        }
+
+        case Messagetype::SendResetCodeResponse:
+        {
+            bool success = false;
+            if(msg.payload().contains("success"))
+            {
+                success =msg.payload()["success"].get<bool>();
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(resetCodeMutex_);
+
+                resetCodeResult_ = success;
+                resetCodeFinished_ = true;
+            }
+
+            resetCodeCv_.notify_one();
+            break;
+        }
+
+        case Messagetype::ResetPasswordResponse:
+        {
+            bool success = false;
+            if(msg.payload().contains("success"))
+            {
+                success =msg.payload()["success"].get<bool>();
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(resetPasswordMutex_);
+
+                resetPasswordResult_ = success;
+                resetPasswordFinished_ = true;
+            }
+
+            resetPasswordCv_.notify_one();
+            break;
+        }
+
     case Messagetype::LogoutResponse:handleLogout(msg);
     break;
     case Messagetype::PrivateChat:handlePrivateChat(msg);
@@ -368,14 +582,37 @@ void Client::onMessage(const Message& msg)
 }
 void Client::handleRegister(const Message& msg)
 {
+    bool success=false;
+
     const auto& payload = msg.payload();
-     if(payload.value("code",-1)==0)
+    if(payload.contains("code"))
     {
-        std::cout<<"Register success."<<std::endl;
+        success= payload["code"].get<int>()==0;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(registerMutex_);
+
+        registerResult_ = success;
+        registerFinished_ = true;
+    }
+
+    registerCv_.notify_one();
+
+    if(success)
+    {
+        std::cout << "注册成功！\n";
     }
     else
     {
-        std::cout<<"Register failed:" <<payload.value("message","") <<std::endl;
+        if(payload.contains("message"))
+        {
+            std::cout<< "注册失败：" << payload["message"].get<std::string>() << "\n";
+        }
+        else
+        {
+            std::cout << "注册失败\n";
+        }
     }
 }
 void Client::handleLogin(const Message& msg)
@@ -385,7 +622,7 @@ void Client::handleLogin(const Message& msg)
 
      {
          std::lock_guard<std::mutex> lock(loginMutex_);
-         loginFinished_=true;
+     
      if(!success)
      {
         login_=false;
@@ -402,6 +639,12 @@ void Client::handleLogin(const Message& msg)
 
     }
 
+    {
+        std::lock_guard<std::mutex> lock(loginMutex_);
+        loginResult_=success;
+            loginFinished_=true;
+
+    }
      loginCv_.notify_one();
     
 }
@@ -623,17 +866,7 @@ void Client::handleGroupList(const Message& msg)
     std::cout<<"请选择群ID："<<std::flush;
 }
 
-bool Client::waitLoginResult()
-{
-    std::unique_lock<std::mutex> lock(loginMutex_);
-    loginCv_.wait(lock,[this]()
-        {
-        return loginFinished_;
-        }
-    );
-    bool ok=login_;
-    return ok;
-}
+
 void Client::handleHistory(const Message& msg)
 {
     auto& payload=msg.payload();
@@ -680,30 +913,7 @@ void Client::handlerequestDownload(int64_t fileId)
 
     connection_->send(msg);
 }
-/*
-void Client::handleOfflineFileNotify(const Message& msg)
-{
 
-auto& payload = msg.payload();
-auto fileId =payload["fileId"].get<int64_t>();
-auto senderId =msg.senderId();
-auto fileName =payload["fileName"].get<std::string>();
-auto fileSize =payload["fileSize"].get<uint64_t>();
- 
- bool ok= fileTransfer_->createReceiveTask(fileId,fileName,fileSize);
-
- if(ok)
- {
-     handlerequestDownload(fileId);
-     std::cout<<"收到离线文件"<<"\nfileId="<<fileId<<"\n发送者="<<senderId<<"\n文件名="<<fileName<<"\n大小="<<fileSize<<std::endl;
-
- }
- else
- {
-  std::cout<<"[client] create receivertask failed\n";
- }
-}
- */
 void Client::handleOfflineFileNotify(const Message& msg)
 {
 
@@ -719,4 +929,32 @@ void Client::acceptFile(int64_t fileId)
     if(!fileTransfer_)
         return;
     fileTransfer_->acceptFile(fileId);
+}
+void Client::registerUser(const std::string& username,const std::string& password, const std::string& email,const std::string& code)
+{
+    if(!connection_)
+    {
+        std::cout << "服务器连接不存在\n";
+        return;
+    }
+
+    Message msg;
+
+    msg.setType(Messagetype::Register);
+
+    msg.setSequence(sequence_++);
+
+    msg.payload()["username"] = username;
+    msg.payload()["password"] = password;
+    msg.payload()["email"] = email;
+    msg.payload()["code"] = code;
+
+    {
+        std::lock_guard<std::mutex> lock(registerMutex_);
+
+        registerFinished_ = false;
+        registerResult_ = false;
+    }
+
+    connection_->send(msg);
 }
