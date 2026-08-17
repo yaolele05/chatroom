@@ -12,7 +12,7 @@ class OfflineService
     OfflineService(const OfflineService&)=delete;
     OfflineService& operator=(const OfflineService&)=delete;
 
-    void sendChatOffline(const OfflineMessage&offline,Session* se);
+    bool sendChatOffline(const OfflineMessage&offline,Session* se);
     void sendGroupOffline(const OfflineMessage& offline,Session* se);
     
     
