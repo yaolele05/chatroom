@@ -5,6 +5,7 @@
 #include "../../model/entity/friend.h"
 #include "../../model/friendmodel.h"
 #include "../../model/usermodel.h"
+#include "../../model/offlinemodel.h"
 #include "../../database/connectionpool/redispool.h"
 #include<iostream>
 
@@ -29,6 +30,14 @@ void FriendService::registerHandler()
    dispatcher.registerHandler(Messagetype::FriendList,[](const Message& message,Session* session)
 {
    FriendService::instance().FriendList(message,session);   
+});
+ dispatcher.registerHandler(Messagetype::UnblockFriend,[](const Message&msg,Session* se)
+{
+   FriendService::instance().blockFriend(msg,se);   
+});
+  dispatcher.registerHandler(Messagetype::UnblockFriend,[](const Message&msg,Session* se)
+{
+   FriendService::instance().unblockFriend(msg,se);   
 });
 }
 void FriendService::addFriend(const Message& msg,Session* se)
@@ -124,6 +133,7 @@ void FriendService::FriendList(const Message& msg,Session*se)
      auto rela=fmodel.findFriends(userId);
     
      UserModel userModel;
+     OfflineMessageModel offlineModel;
      Message reply;
      reply.setType(Messagetype::FriendListResponse);
      reply.setSequence(msg.sequence());
@@ -153,10 +163,99 @@ void FriendService::FriendList(const Message& msg,Session*se)
         item["signature"]=user->signature();
         item["status"]=re.status();
         item["online"] = online;
+        int unreadCount=offlineModel.countPrivateUnread(userId,re.friendId());
+      
+     
+         item["unreadCount"] = unreadCount;
 
       payload["friends"].push_back(item);
           
      }
     RedisPool::instance().releaseConnection(redis);
       se->send(reply);
+}
+bool FriendService::blockFriend(const Message& msg,Session* se)
+{
+    uint32_t userId=msg.senderId();
+    const auto& payload=msg.payload();
+    uint32_t friendId=payload.value("friendId",0u);
+     Message response;
+    response.setType(Messagetype::BlockFriendResponse);
+    response.setSequence(msg.sequence());
+    response.setSenderId(userId);
+
+    if(userId==friendId)
+    {
+          response.payload()["code"]=-1;
+        response.payload()["message"]="不能屏蔽自己";
+        se->send(response);
+        return false;
+    }
+    auto conn=RedisPool::instance().getConnection();
+    if(!conn)
+    {
+
+        response.payload()["code"]=-1;
+        response.payload()["message"]="redis 连接失败";
+        se->send(response);
+        
+        return false;
+    }
+
+    return conn->blockFriend(userId,friendId);
+}
+bool FriendService::unblockFriend(const Message& msg,Session* se)
+{
+     uint32_t userId=msg.senderId();
+    const auto& payload=msg.payload();
+    uint32_t friendId=payload.value("friendId",0u);
+     Message response;
+    response.setType(Messagetype::BlockFriendResponse);
+    response.setSequence(msg.sequence());
+    response.setSenderId(userId);
+
+    if(userId==friendId)
+    {
+        response.payload()["code"]=-1;
+        response.payload()["message"]="不能屏蔽自己";
+        se->send(response);
+        return false;
+    }
+    auto conn=RedisPool::instance().getConnection();
+    if(!conn)
+    {
+
+        response.payload()["code"]=-1;
+        response.payload()["message"]="redis 连接失败";
+        se->send(response);
+        return false;
+    }
+    return conn->unblockFriend(userId,friendId);
+}
+bool FriendService::isFriendBlocked(const Message& msg,Session* se)
+{
+     uint32_t userId=msg.senderId();
+    const auto& payload=msg.payload();
+    uint32_t friendId=payload.value("friendId",0u);
+     Message response;
+    response.setType(Messagetype::BlockFriendResponse);
+    response.setSequence(msg.sequence());
+    response.setSenderId(userId);
+
+     if(userId==friendId)
+    {
+        response.payload()["code"]=-1;
+        response.payload()["message"]="不能屏蔽自己";
+        se->send(response);
+        return false;
+    }
+    auto conn=RedisPool::instance().getConnection();
+    if(!conn)
+    {
+        response.payload()["code"]=-1;
+        response.payload()["message"]="redis 连接失败";
+        se->send(response);
+        return false;
+    }
+    return conn->isBlocked(userId,friendId);
 }
