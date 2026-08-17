@@ -34,31 +34,29 @@ void OfflineService::sendOfflineMessage(Session* se)
         switch(offline.type())
         {
         case OfflineType::ChatMessage:
-        sendChatOffline(offline,se);
-        success=true;
+        
+        success=sendChatOffline(offline,se);
+       
         break;
        
         default:
         break;
         }
-        if(success)
-        {
-        model.remove(offline.id());
-        }
+       
     }
     sendOfflineFile(se);
 }
-void::OfflineService::sendChatOffline(const OfflineMessage& offline,Session* se)
+bool OfflineService::sendChatOffline(const OfflineMessage& offline,Session* se)
 {
    MessageModel model;
    auto message=model.findById(offline.messageId());
    if(!message)
-   return;
+   return false;
   
    if(message->groupId()!=0)
    {
     sendGroupOffline(offline,se);
-    return;
+    return true;
    }
    Message reply;
    reply.setType(Messagetype::PrivateChat);
@@ -70,6 +68,7 @@ void::OfflineService::sendChatOffline(const OfflineMessage& offline,Session* se)
    reply.payload()["content"]=message->content();
 
    se->send(reply);
+   return true;
 }
 void OfflineService::sendGroupOffline(const OfflineMessage& offline,Session* se)
 {
