@@ -1,17 +1,22 @@
 #include "inetaddress.h"
 #include <arpa/inet.h>
 #include <string.h>
+#include <stdexcept>////
 InetAddress::InetAddress()
 {
     memset(&addr_,0,sizeof(addr_));
     addr_.sin_family=AF_INET;
 }
-InetAddress::InetAddress(uint16_t port,const std::string& ip)
+InetAddress::InetAddress(uint16_t port, const std::string& ip)
 {
-    addr_.sin_family=AF_INET;
-    addr_.sin_port=htons(port);
-    inet_pton(AF_INET,ip.c_str(),&addr_.sin_addr);
+    memset(&addr_, 0, sizeof(addr_));
+    addr_.sin_family = AF_INET;
+    addr_.sin_port = htons(port);
 
+    if (inet_pton(AF_INET, ip.c_str(), &addr_.sin_addr) <= 0)
+    {
+        throw std::invalid_argument("invalid IPv4 address: " + ip);
+    }
 }
 InetAddress::InetAddress(const sockaddr_in&addr):addr_(addr)
 {
