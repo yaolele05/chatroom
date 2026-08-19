@@ -1,273 +1,846 @@
-第一阶段
-├── Reactor框架
-├── JSON协议
-├── 登录注册
-└── 在线私聊
 
-第二阶段
-├── Redis
-├── 好友系统
-├── 离线消息
-└── 在线状态
+# ChatRoom
 
-第三阶段
-├── 群聊
-├── 群管理
-├── 历史消息
-└── 心跳机制
+## 软件要求
 
-第四阶段
-├── 文件发送
-├── 图片压缩
-└── 断点续传
+* Ubuntu 22.04+
+* GCC 11+
+* C++17
+* CMake 3.16+
+* Git
+* MySQL 8.0+
+* Redis 6.0+
+* OpenSSL
+* libcurl
+* nlohmann/json
+* spdlog
 
-第五阶段
-├── TLS
-├── 压测
-├── 日志系统
-└── 文档
+## 项目简介
 
-ChatRoom/
-│
-├── CMakeLists.txt
-├── README.md
-│
-├── build/
-├── bin/
-├── logs/
-├── docs/
-│
-├── third_party/
-│   │
-│   ├── json/
-│   ├── hiredis/
-│   ├── openssl/
-│   ├── spdlog/
-│   └── opencv/
-│
-├── protocol/
-│   │
-│   ├── message.h
-│   ├── message.cpp
-│   │
-│   ├── msgtype.h
-│   └── codec.h
-│
-├── common/
-│   │
-│   ├── util/
-│   │   ├── singleton.h
-│   │   ├── timestamp.h
-│   │   ├── uuid.h
-│   │   └── stringutil.h
-│   │
-│   ├── config/
-│   │   ├── config.h
-│   │   └── config.cpp
-│   │
-│   ├── logger/
-│   │   ├── logger.h
-│   │   └── logger.cpp
-│   │
-│   └── crypto/
-│       ├── sha256.h
-│       ├── sha256.cpp
-│       ├── aes.h
-│       └── aes.cpp
-│
-├── network/
-│   │
-│   ├── reactor/
-│   │   │
-│   │   ├── epoll.h
-│   │   ├── epoll.cpp
-│   │   │
-│   │   ├── channel.h
-│   │   ├── channel.cpp
-│   │   │
-│   │   ├── eventloop.h
-│   │   ├── eventloop.cpp
-│   │   │
-│   │   ├── timer.h
-│   │   ├── timer.cpp
-│   │   │
-│   │   ├── timerqueue.h
-│   │   └── timerqueue.cpp
-│   │
-│   ├── socket/
-│   │   ├── socket.h
-│   │   └── socket.cpp
-│   │
-│   ├── buffer/
-│   │   ├── buffer.h
-│   │   └── buffer.cpp
-│   │
-│   ├── connection/
-│   │   ├── tcpconnection.h
-│   │   ├── tcpconnection.cpp
-│   │   │
-│   │   ├── sslconnection.h
-│   │   └── sslconnection.cpp
-│   │
-│   ├── acceptor/
-│   │   ├── acceptor.h
-│   │   └── acceptor.cpp
-│   │
-│   └── server/
-│       ├── tcpserver.h
-│       └── tcpserver.cpp
-│
-├── database/
-│   │
-│   ├── redis/
-│   │   ├── redisclient.h
-│   │   └── redisclient.cpp
-│   │
-│   └── repository/
-│       ├── userrepo.h
-│       ├── friendrepo.h
-│       ├── grouprepo.h
-│       ├── messagerepo.h
-│       └── filerepo.h
-│
-├── business/
-│   │
-│   ├── user/
-│   │   ├── userservice.h
-│   │   └── userservice.cpp
-│   │
-│   ├── friend/
-│   │   ├── friendservice.h
-│   │   └── friendservice.cpp
-│   │
-│   ├── group/
-│   │   ├── groupservice.h
-│   │   └── groupservice.cpp
-│   │
-│   ├── chat/
-│   │   ├── chatservice.h
-│   │   └── chatservice.cpp
-│   │
-│   └── file/
-│       ├── fileservice.h
-│       └── fileservice.cpp
-│
-├── model/
-│   │
-│   ├── user.h
-│   ├── user.cpp
-│   │
-│   ├── friend.h
-│   ├── friend.cpp
-│   │
-│   ├── group.h
-│   ├── group.cpp
-│   │
-│   ├── groupmember.h
-│   ├── groupmember.cpp
-│   │
-│   ├── message.h
-│   ├── message.cpp
-│   │
-│   ├── fileinfo.h
-│   └── fileinfo.cpp
-│
-├── storage/
-│   │
-│   ├── images/
-│   │
-│   ├── files/
-│   │
-│   ├── avatar/
-│   │
-│   └── temp/
-│
-├── media/
-│   │
-│   ├── image/
-│   │   ├── compressor.h
-│   │   └── compressor.cpp
-│   │
-│   └── file/
-│       ├── chunk.h
-│       ├── chunk.cpp
-│       │
-│       ├── resumefile.h
-│       └── resumefile.cpp
-│
-├── security/
-│   │
-│   ├── ssl/
-│   │   ├── sslcontext.h
-│   │   ├── sslcontext.cpp
-│   │   │
-│   │   ├── cert/
-│   │   │   ├── server.crt
-│   │   │   └── server.key
-│   │   │
-│   │   └── sslmanager.cpp
-│   │
-│   └── auth/
-│       ├── token.h
-│       └── token.cpp
-│
+ChatRoom 是一个基于 C++17 开发的客户端/服务器聊天室系统。
+
+项目采用自研的 MiniMuduo Reactor 网络库，基于 Linux `epoll` 实现网络事件驱动。
+
+主要功能包括：
+
+* 用户注册
+* 密码登录
+* 邮箱验证码登录
+* 密码找回
+* 好友管理
+* 好友申请
+* 好友屏蔽
+* 私聊
+* 群聊
+* 聊天历史记录
+* 离线/未读消息
+* 心跳检测
+* 文件传输
+* 文件断点续传
+* SHA-256 文件校验
+* Base64 编解码
+* SSL/TLS 支持
+* MySQL 数据持久化
+* Redis 缓存及状态管理
+* 邮件验证码
+
+## 项目架构
+
+项目主要由以下模块组成：
+
+```text
+ChatRoom
+├── client              # 客户端
+├── server              # 服务端
+├── common              # 公共模块
+└── minimuduo           # Reactor 网络库
+```
+
+### MiniMuduo 网络层
+
+```text
+TcpServer
+    │
+    ├── Acceptor
+    │
+    └── EventLoop
+            │
+            ├── Channel
+            ├── EpollPoller
+            └── EventLoopThreadPool
+                    │
+                    └── TcpConnection
+```
+
+### 协议层
+
+```text
+Message
+    ↓
+JsonCodec
+    ↓
+JSON
+    ↓
+PacketCodec
+    ↓
+TCP
+```
+
+协议相关代码位于：
+
+```text
+common/protocol/
+```
+
+其中：
+
+* `message`：消息对象
+* `messagetype`：消息类型
+* `JsonCodec`：JSON 编解码
+* `PacketCodec`：TCP 数据包封装与拆包
+* `protocol`：协议相关定义
+
+### 服务端结构
+
+```text
+Client
+   │
+   │ TCP / SSL
+   ↓
+TcpServer
+   ↓
+Session
+   ↓
+BusinessDispatcher
+   ↓
+Service
+   ├── LoginService
+   ├── FriendService
+   ├── GroupService
+   ├── ChatService
+   ├── HistoryService
+   ├── OfflineService
+   ├── FileService
+   ├── EmailService
+   └── HeartbeatService
+        │
+        ├── MySQL
+        └── Redis
+```
+
+---
+
+# 安装环境
+
+## 安装编译工具
+
+```bash
+sudo apt update
+
+sudo apt install -y \
+    build-essential \
+    gcc \
+    g++ \
+    cmake \
+    git \
+    pkg-config
+```
+
+检查 GCC：
+
+```bash
+gcc --version
+g++ --version
+```
+
+检查 CMake：
+
+```bash
+cmake --version
+```
+
+项目使用 C++17 编译。
+
+---
+
+## 安装 OpenSSL
+
+ChatRoom 使用 OpenSSL 实现：
+
+* SHA-256
+* SSL/TLS
+* 加密相关功能
+
+安装：
+
+```bash
+sudo apt install -y \
+    openssl \
+    libssl-dev
+```
+
+检查：
+
+```bash
+openssl version
+```
+
+---
+
+## 安装 MySQL
+
+ChatRoom 使用 MySQL 保存：
+
+* 用户信息
+* 好友关系
+* 好友申请
+* 群组信息
+* 群成员信息
+* 聊天消息
+* 离线/未读消息
+* 文件传输信息
+
+安装：
+
+```bash
+sudo apt install -y \
+    mysql-server \
+    libmysqlclient-dev
+```
+
+启动 MySQL：
+
+```bash
+sudo systemctl enable mysql
+sudo systemctl start mysql
+```
+
+检查 MySQL：
+
+```bash
+sudo systemctl status mysql
+```
+
+登录 MySQL：
+
+```bash
+mysql -u root -p
+```
+
+如果 Ubuntu 使用系统 root 用户认证，也可以：
+
+```bash
+sudo mysql
+```
+
+---
+
+# 配置 MySQL
+
+项目数据库结构应以项目中的 SQL 文件为准：
+
+```text
+sql/chatroom.sql
+```
+
+创建数据库：
+
+```bash
+mysql -u root -p < sql/chatroom.sql
+```
+
+默认数据库配置：
+
+```text
+数据库地址：127.0.0.1
+数据库端口：3306
+数据库名称：chatroom
+数据库用户：root
+数据库密码：123456
+```
+
+如果实际环境中的 MySQL 用户名、密码或地址不同，需要修改项目中的 MySQL 配置。
+
+登录数据库：
+
+```bash
+mysql -u root -p
+```
+
+检查数据库：
+
+```sql
+SHOW DATABASES;
+```
+
+进入 ChatRoom 数据库：
+
+```sql
+USE chatroom;
+```
+
+查看数据表：
+
+```sql
+SHOW TABLES;
+```
+
+---
+
+# 安装 Redis
+
+ChatRoom 使用 Redis 保存实时状态和临时数据，包括：
+
+* 用户在线状态
+* 好友屏蔽关系
+* 邮箱验证码
+* 登录验证码
+* 其他缓存数据
+
+安装：
+
+```bash
+sudo apt install -y redis-server
+```
+
+启动 Redis：
+
+```bash
+sudo systemctl enable redis-server
+sudo systemctl start redis-server
+```
+
+检查 Redis：
+
+```bash
+sudo systemctl status redis-server
+```
+
+测试 Redis：
+
+```bash
+redis-cli ping
+```
+
+正常情况下返回：
+
+```text
+PONG
+```
+
+默认 Redis 配置：
+
+```text
+Redis 地址：127.0.0.1
+Redis 端口：6379
+```
+
+---
+
+# 安装 libcurl
+
+ChatRoom 的邮箱验证码功能使用 libcurl 连接 SMTP 服务器。
+
+安装：
+
+```bash
+sudo apt install -y \
+    curl \
+    libcurl4-openssl-dev
+```
+
+检查：
+
+```bash
+curl --version
+```
+
+---
+
+# 安装 nlohmann/json
+
+ChatRoom 应用层协议使用 JSON。
+
+安装：
+
+```bash
+sudo apt install -y nlohmann-json3-dev
+```
+
+安装完成后通常可以找到：
+
+```text
+/usr/include/nlohmann/json.hpp
+```
+
+项目中的 JSON 编解码主要位于：
+
+```text
+common/protocol/Jsoncodec.cpp
+common/protocol/Jsoncodec.h
+```
+
+---
+
+# 安装 spdlog
+
+ChatRoom 使用 spdlog 进行日志输出。
+
+安装：
+
+```bash
+sudo apt install -y libspdlog-dev
+```
+
+检查：
+
+```bash
+dpkg -l | grep spdlog
+```
+
+---
+
+# 邮件配置
+
+如果需要使用以下功能：
+
+* 注册验证码
+* 邮箱验证码登录
+* 密码找回
+
+需要配置 SMTP 邮箱。
+
+项目可以使用 QQ 邮箱 SMTP。
+
+配置示例：
+
+```text
+SMTP Server: smtp.qq.com
+SMTP Port: 465
+Email: 你的QQ邮箱@qq.com
+Auth Code: QQ邮箱授权码
+```
+
+如果项目提供：
+
+```text
+config/email.conf.example
+```
+
+可以复制：
+
+```bash
+cp config/email.conf.example config/email.conf
+```
+
+然后修改：
+
+```text
+config/email.conf
+```
+
+例如：
+
+```text
+smtp_server=smtp.qq.com
+smtp_port=465
+email=你的邮箱@qq.com
+auth_code=你的邮箱授权码
+```
+
+其中：
+
+```text
+email
+```
+
+填写自己的 QQ 邮箱。
+
+```text
+auth_code
+```
+
+填写 QQ 邮箱生成的 SMTP 授权码，而不是 QQ 邮箱登录密码。
+
+---
+
+# SSL/TLS 配置
+
+项目 SSL/TLS 相关代码位于：
+
+```text
+common/security/ssl/
+```
+
+包括：
+
+```text
+sslcontext.cpp
+sslcontext.h
+sslmanager.cpp
+```
+
+证书目录：
+
+```text
+common/security/ssl/cert/
+```
+
+包含：
+
+```text
+server.crt
+server.key
+```
+
+如果更换服务器或部署到其他环境，需要根据实际部署环境配置对应的 SSL 证书和私钥。
+
+---
+
+# 项目编译
+
+进入项目根目录：
+
+```bash
+cd ~/chatroom
+```
+
+第一次编译：
+
+cd ~/chatroom/build
+cmake ..
+make -j
+
+```
+
+编译成功后：
+
+```text
+build/
 ├── client/
-│   │
-│   ├── cli/
-│   │   ├── main.cpp
-│   │   ├── command.cpp
-│   │   └── command.h
-│   │
-│   ├── network/
-│   │   ├── clientconnection.cpp
-│   │   └── clientconnection.h
-│   │
-│   ├── chat/
-│   │
-│   ├── file/
-│   │
-│   └── image/
-│
-├── tests/
-│   │
-│   ├── test_redis.cpp
-│   ├── test_login.cpp
-│   ├── test_group.cpp
-│   ├── test_file.cpp
-│   └── test_tls.cpp
-│
-└── tools/
-    │
-    ├── pressure_test/
-    │   ├── benchmark.cpp
-    │   └── robot.cpp
-    │
-    └── scripts/
+│   └── chatclient
+├── server/
+│   └── chatserver
+├── common/
+│   └── libcommon.a
+└── minimuduo/
+    └── libminimuduo.a
+```
+
+---
+
+# 启动服务器
+
+进入项目根目录：
+
+```bash
+cd ~/chatroom/build
+```
+
+启动服务器：
+
+```bash
+./server/chatserver
+```
+
+如果项目服务器默认监听：
+
+```text
+127.0.0.1:8888
+```
+
+则客户端可以直接连接：
+
+```bash
+./client/chatclient
+```
+
+---
+
+# 指定服务器 IP 和端口
+
+服务器支持指定监听地址和端口：
 
 
+# 启动客户端
+
+默认连接服务器：
+
+```bash
+./client/chatclient
+```
+
+也可以指定服务器：
+
+```bash
+./client/chatclient  --<IP>  --<PORT>
+```
+
+启动方式
+
+例如：
+
+./chatserver
+
+默认：
+
+0.0.0.0:8888
+
+指定端口：
+
+./server/chatserver --port 9999
+
+指定 IP：
+
+./server/chatserver --ip 127.0.0.1
+
+两个一起：
+
+./server/chatserver --ip 0.0.0.0 --port 9999
+```bash
+---
+
+# 本机测试
+
+首先启动 MySQL：
+
+```bash
+sudo systemctl start mysql
+```
+
+启动 Redis：
+
+```bash
+sudo systemctl start redis-server
+```
+
+然后启动服务器：
+
+```bash
+./server/chatserver
+```
+
+再打开一个终端：
+
+./build/client/chatclient
+```
+
+如果需要测试两个客户端，可以打开两个终端：
+
+终端 1：
+
+```bash
+./build/client/chatclient
+```
+
+终端 2：
+
+```bash
+./build/client/chatclient
+```
+
+然后使用不同账号登录进行：
+
+* 好友测试
+* 私聊测试
+* 群聊测试
+* 文件传输测试
+* 离线消息测试
+* 好友屏蔽测试
+
+---
 
 
+# 局域网测试
 
+如果需要让其他电脑运行客户端，需要让服务器监听局域网地址。
+
+服务器：
+
+```bash
+./server/chatserver 0.0.0.0 8888
+```
+
+查看服务器 IP：
+
+```bash
+ip addr
+```
+
+例如服务器电脑 IP：
+
+```text
+192.168.1.100
+```
+
+其他电脑运行：
+
+```bash
+./client/chatclient 192.168.1.100 8888
+```
+
+如果无法连接，需要检查防火墙：
+
+```bash
+sudo ufw status
+```
+
+如果启用了 UFW，可以开放服务器端口：
+
+```bash
+sudo ufw allow 8888/tcp
+```
+
+---
+
+# 常见服务端口
+
+ChatRoom 默认涉及以下服务：
+
+| 服务              | 默认地址        | 默认端口 |
+| --------------- | ----------- | ---: |
+| ChatRoom Server | 127.0.0.1   | 8888 |
+| MySQL           | 127.0.0.1   | 3306 |
+| Redis           | 127.0.0.1   | 6379 |
+| QQ SMTP         | smtp.qq.com |  465 |
+
+其中 ChatRoom Server 的监听端口可以通过启动参数修改。
+
+---
+
+# 项目目录结构
+
+```text
 chatroom
-|
-├── net
-│   ├── eventloop
-│   ├── epoll
-│   ├── channel
-│   └── connection
+├── client
+│   ├── client.cpp
+│   ├── client.h
+│   ├── clientconnection.cpp
+│   ├── clientconnection.h
+│   ├── filetransf.cpp
+│   ├── filetransf.h
+│   ├── tcpclient.cpp
+│   ├── tcpclient.h
+│   └── main.cpp
 │
-├── protocol
-│   ├── message.h
-│   ├── message.cpp
-│   ├── codec.h
-│   └── codec.cpp
+├── common
+│   ├── buffer.cpp
+│   ├── buffer.h
+│   │
+│   ├── protocol
+│   │   ├── message.cpp
+│   │   ├── message.h
+│   │   ├── messagetype.h
+│   │   ├── Jsoncodec.cpp
+│   │   ├── Jsoncodec.h
+│   │   ├── packetcodec.cpp
+│   │   ├── packetcodec.h
+│   │   ├── protocol.cpp
+│   │   └── protocol.h
+│   │
+│   └── security
+│       ├── auth
+│       ├── crypto
+│       └── ssl
 │
-├── business
-│   ├── usermanager
-│   ├── friendmanager
-│   └── chatmanager
+├── minimuduo
+│   └── net
+│       ├── acceptor
+│       ├── channel
+│       ├── epollpoller
+│       ├── eventloop
+│       ├── EventLoopThread
+│       ├── EventLoopThreadPool
+│       ├── socket
+│       ├── Tcpconnection
+│       └── TcpServer
 │
 ├── server
-│   └── chatserver
+│   ├── business
+│   │   ├── businessdispatcher
+│   │   └── service
+│   │       ├── chatservice
+│   │       ├── emailservice
+│   │       ├── fileservice
+│   │       ├── friendservice
+│   │       ├── groupservice
+│   │       ├── heartbeatservice
+│   │       ├── historyservice
+│   │       ├── loginservice
+│   │       └── offlineservice
+│   │
+│   ├── database
+│   │   ├── connectionpool
+│   │   │   ├── mysqlpool
+│   │   │   └── redispool
+│   │   ├── mysql
+│   │   └── redis
+│   │
+│   ├── model
+│   │   ├── entity
+│   │   ├── filemodel
+│   │   ├── filereceivermodel
+│   │   ├── friendmodel
+│   │   ├── groupmodel
+│   │   ├── messagemodel
+│   │   ├── offlinemodel
+│   │   └── usermodel
+│   │
+│   ├── session
+│   ├── chatserver.cpp
+│   └── main.cpp
 │
-└── main.cpp
+├── CMakeLists.txt
+└── README.md
+```
+
+
+##  MySQL 和 Redis 必须先启动
+
+启动服务器之前建议确认：
+
+```bash
+redis-cli ping
+```
+
+返回：
+
+```text
+PONG
+```
+
+同时确认 MySQL：
+
+```bash
+sudo systemctl status mysql
+```
+
+##  邮箱功能不是必须的
+
+如果只测试：
+
+* 密码登录
+* 好友
+* 私聊
+* 群聊
+* 文件传输
+
+可以不配置 SMTP。
+
+如果需要：
+
+* 注册验证码
+* 邮箱验证码登录
+* 找回密码
+
+则必须配置邮箱 SMTP。
+
+## 4. 文件传输目录
+
+服务端文件相关目录：
+
+```text
+server/files/
+```
+
+客户端/服务端进行文件传输测试时，需要确保相关目录存在并具有读写权限。
