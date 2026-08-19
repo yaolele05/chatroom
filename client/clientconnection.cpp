@@ -116,18 +116,18 @@ void ClientConnection::connectDestroyed()
 }
 void ClientConnection::handleRead()
 {
-    std::cout << "client TcpConnection handleRead"<< std::endl;
+   // std::cout << "client TcpConnection handleRead"<< std::endl;
    int savedErrno=0;
     ssize_t n=inputBuffer_->readFd(channel_.fd(),&savedErrno);
-    std::cout<<"client read bytes="<<n<<std::endl;
+  //  std::cout<<"client read bytes="<<n<<std::endl;
     if(n>0)
     {
-         std::cout<<"client read bytes="<<n<<std::endl;
+        // std::cout<<"client read bytes="<<n<<std::endl;
          auto data=inputBuffer_->peek();
 
         uint32_t len;
        memcpy(&len,data,4);
-       std::cout<<"raw length="<<ntohl(len) <<std::endl;
+      // std::cout<<"raw length="<<ntohl(len) <<std::endl;
         while(true)
         {
         std::string json;
@@ -141,12 +141,9 @@ void ClientConnection::handleRead()
                 try
                 {
                    
-                    /*if(json.find("\"data\"") == std::string::npos)
-                    {
-                  std::cout<<"json:"<<json<<std::endl;
-                    }*/
-                    
+                  // std::cout << "[ClientConnection] json before JsonCodec::decode = "<< json << std::endl;
                    Message message =JsonCodec::decode(json);
+
                    std::cout<<"message type="<<static_cast<int>(message.type()) <<std::endl;
                    if(messageCallback_)
                    {

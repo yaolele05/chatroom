@@ -4,6 +4,11 @@
 #include <thread>
 #include <limits>
 #include <chrono>
+#include <termios.h>
+#include <unistd.h>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 void loginMenu(Client& client);
 void chatMenu(Client& client);
 void friendMenu(Client& client);
@@ -13,12 +18,84 @@ void groupactionMenu(Client& client,int groupid,const std::string& groupname);
 void receiveFriendFileMenu(Client& client,int friendid);
 void receiveGroupFileMenu(Client& client,int groupid);
 void receiveFileActionMenu(Client& client,int64_t fileId);
+
 void historyMenu(Client& client);
-int main()
+void privateChatLoop(Client& client, int friendid, const std::string& friendname);
+void groupChatLoop(Client& client, int groupid, const std::string& groupname);
+void friendRequestMenu(Client& client);
+void groupManageMenu(Client& client,int groupid, const std::string& groupname);
+void groupJoinRequestMenu(Client& client,int64_t groupid);
+void groupMemberMenu(Client& client,int64_t groupId);
+void groupJoinRequestMenu(Client& client,int64_t groupId);
+void groupMemberActionMenu(Client& client,int64_t groupId,int64_t userId,const std::string& username);
+#include <iomanip>
+#include <sstream>
+
+std::string formatFileSize(uint64_t size)
 {
+    std::ostringstream oss;
+
+    if(size < 1024)
+    {
+        oss << size << " B";
+    }
+    else if(size < 1024ULL * 1024)
+    {
+        oss << std::fixed << std::setprecision(2) << static_cast<double>(size) / 1024.0 << " KB";
+    }
+    else if(size < 1024ULL * 1024 * 1024)
+    {
+        oss << std::fixed << std::setprecision(2) << static_cast<double>(size) / (1024.0 * 1024.0)<< " MB";
+    }
+    else
+    {
+        oss << std::fixed << std::setprecision(2)<< static_cast<double>(size) / (1024.0 * 1024.0 * 1024.0)<< " GB";
+    }
+
+    return oss.str();
+}
+void disableEcho()
+{
+    termios tty;
+
+    tcgetattr(STDIN_FILENO, &tty);
+
+    tty.c_lflag &= ~ECHO;
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+}
+
+void enableEcho()
+{
+    termios tty;
+
+    tcgetattr(STDIN_FILENO, &tty);
+
+    tty.c_lflag |= ECHO;
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &tty);
+}
+int main(int argc, char* argv[])
+{
+
     EventLoop loop;
     Client client(&loop);
-    if(!client.connect("127.0.0.1",8888))
+    std::string serverIp="127.0.0.1";
+    uint16_t serverPort=8888;
+    for(int i=1;i<argc;++i)
+    {
+        std::string arg=argv[i];
+        if(arg=="--ip" && i+1<argc)
+        {
+            serverIp=argv[++i];
+        }
+        else if(arg=="--port" && i+1<argc)
+        {
+            serverPort=static_cast<uint16_t>(std::stoi(argv[++i]));
+        }
+    }
+    std::cout<<"Connectiong to"<<serverIp<<":"<<serverPort<<std::endl;
+    if(!client.connect(serverIp,serverPort))
     {
         std::cout<<"connection failed\n";
         return -1;
@@ -121,6 +198,12 @@ void loginMenu(Client& client)
                 std::cout << "请输入邮箱：";
                 std::cin >> email;
 
+
+        if(email.find('@') == std::string::npos || email.find('.') == std::string::npos)
+         { 
+         std::cout << "邮箱格式错误，请重新输入。" << std::endl;
+          return;
+         }
                 std::cout << "正在发送验证码......\n";
                 client.sendRegisterCode(email);
 
@@ -215,7 +298,8 @@ void chatMenu(Client& client)
 5.创建群
 6.加群
 7.退群
-8.注销
+8.好友申请列表
+9.注销
 
 0.退出
 
@@ -337,18 +421,51 @@ void chatMenu(Client& client)
             client.leaveGroup(gid);
             break;
            }
-
-           case 8:
-           {
-            client.logout();
-            return;
-           }
+          case 8:
+          {
+            friendRequestMenu(client);
+            break;
+          }
+         
+           case 9:
+        {
+        std::cout << "\n========== 注销账号 ==========\n";
+        std::cout << "注销账号后，账号以及相关数据将被删除。\n";
+        std::cout << "1. 确定注销\n";
+        std::cout << "0. 返回\n";
+        std::cout << "请选择：";
+        int choice;
+      if(!(std::cin >> choice))
+       {
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+        std::cout << "输入错误\n";
+        break;
+      }
+     if(choice == 0)
+    {
+        break;
+    }
+     if(choice != 1)
+     {
+        std::cout << "选择无效\n";
+        break;
+     }
+    client.deleteAccount();
+    if(client.waitDeleteAccountResult())
+    {
+        std::cout << "账号注销成功！\n";
+        return;
+    }
+    std::cout << "账号注销失败，请稍后重试。\n";
+    break;
+    }
        
            case 0:
-           client.disconnect();
-           client.quit();
-           return;
-           
+           {
+            client.logout();
+             return;
+           }
            default:
            std::cout<<"选择无效\n";
            break;
@@ -364,8 +481,11 @@ void friendMenu(Client& client)
   
     std::cout << "\n========== 好友 ==========\n";
        client.friendList();
-  
-   uint32_t friendid;
+       client.waitFriendList();
+
+       std::cout <<"\n";
+   
+       uint32_t friendid;
    
    if(!(std::cin>>friendid))
     {
@@ -378,7 +498,7 @@ void friendMenu(Client& client)
     {
         return;
     }
-    ///这里要等接收完
+    
     const auto& friends=client.friends();
     std::string friendname;
     bool found=false;
@@ -410,7 +530,8 @@ void friendactionMenu(Client& client,int friendid,const std::string& friendname)
 2.查看历史聊天记录
 3.发送文件
 4.待接收文件
-
+5.屏蔽好友
+6.取消屏蔽
 0.退出
 
 ==========================
@@ -428,15 +549,12 @@ void friendactionMenu(Client& client,int friendid,const std::string& friendname)
         {
             case 1:
           {
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-              std::string text;
-            std::getline(std::cin,text);
-           client.privateChat(friendid,text);
+             privateChatLoop(client, friendid, friendname);
             break;
           }
           case 2:
           {
-            client.privateHistory(friendid);
+            client.privateHistory(friendid,friendname);
             break;
           }
           case 3:
@@ -454,7 +572,14 @@ void friendactionMenu(Client& client,int friendid,const std::string& friendname)
             receiveFriendFileMenu(client,friendid);
             break;
           }
-           
+           case 5:
+           client.blockFriend(friendid);
+           break;
+           case 6:
+           client.unblockFriend(friendid);
+           break;
+
+          
           case 0:
           {
             return;
@@ -470,6 +595,44 @@ void friendactionMenu(Client& client,int friendid,const std::string& friendname)
         }
     }
     return;
+}
+void privateChatLoop(Client& client,int friendid,const std::string& friendname)
+{
+    client.enterPrivateChat(friendid,friendname);
+   
+ //client.privateHistory(friendid, friendname); 
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+
+    std::cout << "\n========================================\n";
+    std::cout << "与 " << friendname << " 聊天\n";
+    std::cout << "输入 /quit 退出聊天\n";
+    std::cout << "\n========================================\n";
+   
+    while(true)
+    {
+        std::string text;
+
+        if(!std::getline(std::cin, text))
+        {
+            std::cin.clear();
+             client.leaveChat();
+            return;
+        }
+
+        if(text == "/quit")
+        {
+            client.leaveChat();
+            std::cout << "已退出聊天\n";
+            return;
+        }
+
+        if(text.empty())
+        {
+            continue;
+        }
+
+        client.privateChat(friendid, text);
+    }
 }
 void groupMenu(Client& client)
 {
@@ -524,7 +687,8 @@ void groupactionMenu(Client& client,int groupid,const std::string& groupname)
 2.查看历史聊天记录
 3.发送文件
 4.待接收文件
-
+5.群管理
+6.群成员
 0.退出
 
 ==========================
@@ -541,14 +705,14 @@ void groupactionMenu(Client& client,int groupid,const std::string& groupname)
         {
             case 1:
           {
-              std::string text;
-            std::getline(std::cin,text);
-           client.groupChat(groupid,text);
-            break;
-          }
+          groupChatLoop(client, groupid, groupname);
+         break;
+          
+         }
           case 2:
           {
-           historyMenu(client);
+           
+           client.groupHistory(groupid);
             break;
           }
           case 3:
@@ -564,6 +728,17 @@ void groupactionMenu(Client& client,int groupid,const std::string& groupname)
             receiveGroupFileMenu(client,groupid);
             break;
           }
+            case 5:
+            {
+                groupManageMenu(client, groupid, groupname);
+                break;
+            }
+            case 6:
+            {
+            groupMemberMenu(client,groupid);
+
+            break;
+            }
            case 0:
           {
             return;
@@ -579,6 +754,42 @@ void groupactionMenu(Client& client,int groupid,const std::string& groupname)
   
 
     return;
+}
+void groupChatLoop(Client& client, int groupid, const std::string& groupname)
+{
+
+    client.enterGroupChat(groupid);
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+    std::cout << "\n========================================\n";
+    std::cout << "进入群聊：" << groupname << "\n";
+    std::cout << "输入 /quit 退出群聊\n";
+    std::cout << "\n========================================\n";
+    while(true)
+    {
+        std::string text;
+
+        disableEcho();
+        if(!std::getline(std::cin, text))
+        {
+            std::cin.clear();
+              client.leaveChat();  
+            return;
+        }
+
+        if(text == "/quit")
+        {
+            client.leaveChat();
+            std::cout << "已退出群聊\n";
+            return;
+        }
+        if(text.empty())
+        {
+            continue;
+        }
+
+        client.groupChat(groupid, text);
+    }
 }
 void receiveFriendFileMenu(Client& client,int friendid)
 {
@@ -599,7 +810,7 @@ void receiveFriendFileMenu(Client& client,int friendid)
                 continue;
 
             fileIds.push_back(static_cast<int64_t>(file.fileId));
-            std::cout<< index<< ". "<< file.filename<< "       "<< file.filesize / 1024 / 1024<< " MB\n";
+            std::cout<< index<< ". "<< file.filename<< "       "<<formatFileSize(file.filesize)<< " \n";
             ++index;
         }
         
@@ -732,6 +943,438 @@ void historyMenu(Client& client)
         if(choice==0)
         {
             return;
+        }
+    }
+}
+std::string formatTimestamp(std::int64_t timestamp)
+{
+    std::time_t time = static_cast<std::time_t>(timestamp);
+
+    std::tm* localTime = std::localtime(&time);
+
+    if(localTime == nullptr)
+    {
+        return "未知时间";
+    }
+    std::ostringstream oss;
+    oss << std::put_time(localTime, "%Y-%m-%d %H:%M:%S");
+
+    return oss.str();
+}
+void friendRequestMenu(Client& client)
+{
+    while(true)
+    {
+        std::cout << "\n========== 好友申请 ==========\n";
+
+        client.friendRequestList();
+        client.waitFriendRequestList();
+
+        const auto& requests = client.friendRequests();
+
+        if(requests.empty())
+        {
+            std::cout << "当前没有好友申请\n";
+            std::cout << "0. 返回\n";
+
+            int choice;
+            std::cin >> choice;
+
+            if(choice == 0)
+            {
+                return;
+            }
+
+            continue;
+        }
+
+        int index = 1;
+
+        for(const auto& request : requests)
+        {
+            std::cout << "\n";
+            std::cout << index << ".\n";
+
+            std::cout<< "申请ID: "<< request.value("requestId", 0)<< "\n";
+            std::cout<< "申请人ID: " << request.value("fromUserId", 0)<< "\n";
+            std::cout<< "用户名: "<< request.value("username", "")<< "\n";
+            std::cout<< "昵称: "<< request.value("nickname", "") << "\n";
+            std::int64_t createTime =request.value("createTime", static_cast<std::int64_t>(0));
+            std::cout<< "申请时间: "  << formatTimestamp(createTime)<< "\n";
+            std::cout<< "-----------------------------\n";
+
+            ++index;
+        }
+
+        std::cout << "0. 返回\n";
+        std::cout << "请选择申请编号：" << std::flush;
+
+        int choice;
+
+        if(!(std::cin >> choice))
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "输入错误，请重新输入\n";
+            continue;
+        }
+
+        if(choice == 0)
+        {
+            return;
+        }
+
+        if(choice < 1 || choice > static_cast<int>(requests.size()))
+        {
+            std::cout << "选择无效\n";
+            continue;
+        }
+        const auto& request = requests[choice - 1];
+        uint32_t requestId =request.value("requestId", 0u);
+        uint32_t userId =request.value("fromUserId", 0u);
+        std::string username = request.value("nickname", request.value("username", ""));
+        while(true)
+        {
+            std::cout << "\n";
+            std::cout << "========== 好友申请 ==========\n";
+            std::cout << "申请人: " << username << "\n";
+            std::cout << "1. 同意\n";
+            std::cout << "2. 拒绝\n";
+            std::cout << "0. 返回\n";
+            std::cout << "请选择：" << std::flush;
+
+            int op;
+
+         if(!(std::cin >> op))
+          {
+            std::cin.clear();
+             std::cin.ignore(std::numeric_limits<std::streamsize>::max(),  '\n' );
+            std::cout << "输入错误，请重新输入\n";
+            continue;
+          }
+         if(op == 0)
+        {
+            break;
+        }
+        if(op == 1)
+        {
+            client.acceptFriend(requestId);
+                break;
+        }
+        if(op == 2)
+            {
+                client.rejectFriend(requestId);
+                break;
+            }
+            std::cout << "选择无效\n";
+        }
+    }
+}
+void groupManageMenu(Client& client,int groupid,const std::string& groupname)
+{
+    while(true)
+    {
+        std::cout << "\n";
+        std::cout << "========== 群管理 ==========\n";
+        std::cout << "群名称：" << groupname << "\n";
+        std::cout << "群ID：" << groupid << "\n";
+        std::cout << "\n";
+
+        std::cout << "1. 查看加群申请\n";
+        std::cout << "2. 查看群成员\n";
+      
+        std::cout << "0. 返回\n";
+
+        int op;
+
+        std::cout << "请选择：" << std::flush;
+
+        if(!(std::cin >> op))
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+            std::cout << "输入错误，请重新输入\n";
+            continue;
+        }
+
+        switch(op)
+        {
+            case 1:
+            {
+             groupJoinRequestMenu(client,groupid);
+                break;
+            }
+
+            case 2:
+            {
+               groupMemberMenu(client,groupid);
+                break;
+            }
+            case 0:
+            {
+                return;
+            }
+
+            default:
+            {
+                std::cout << "选择无效\n";
+                break;
+            }
+        }
+    }
+}
+void groupJoinRequestMenu(Client& client, int64_t groupid)
+{
+    while(true)
+    {
+        std::cout << "\n";
+        std::cout << "========== 加群申请 ==========\n";
+
+        client.groupJoinRequestList(groupid);
+        client.waitGroupJoinRequestList();
+        const auto& requests = client.groupJoinRequests();
+        if(requests.empty())
+        {
+            std::cout << "当前没有待处理的加群申请\n";
+            std::cout << "0. 返回\n";
+            int choice;
+        if(!(std::cin >> choice))
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+                continue;
+        }
+        if(choice == 0)
+        {
+            return;
+        }
+            continue;
+        }
+
+        int index = 1;
+
+        for(const auto& request : requests)
+        {
+            std::cout << "\n";
+            std::cout << index << ".\n";
+            std::cout << "申请ID: "<< request.value("requestId", 0)<< "\n";
+            std::cout<< "申请人ID: "<< request.value("fromUserId", 0)<< "\n";
+            std::cout<< "用户名: "<< request.value("username", "")<< "\n";
+            std::cout<< "昵称: "<< request.value("nickname", "")<< "\n";
+            std::int64_t createTime =request.value("createTime", static_cast<std::int64_t>(0));
+            std::cout<< "申请时间: "<< formatTimestamp(createTime)<< "\n";
+            std::cout<< "-----------------------------\n";
+
+            ++index;
+        }
+
+        std::cout << "0. 返回\n";
+        std::cout << "请选择申请编号：" << std::flush;
+
+        int choice;
+
+        if(!(std::cin >> choice))
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+            std::cout << "输入错误，请重新输入\n";
+            continue;
+        }
+
+        if(choice == 0)
+        {
+            return;
+        }
+
+        if(choice < 1 ||
+           choice > static_cast<int>(requests.size()))
+        {
+            std::cout << "选择无效\n";
+            continue;
+        }
+
+        const auto& request = requests[choice - 1];
+    int64_t requestId =request.value("requestId",static_cast<int64_t>(0));
+        int userId =request.value("userId", 0);
+        std::string username =request.value( "nickname",request.value("username", ""));
+        while(true)
+        {
+            std::cout << "\n";
+            std::cout << "========== 加群申请 ==========\n";
+            std::cout << "申请人：" << username << "\n";
+            std::cout << "用户ID：" << userId << "\n";
+            std::cout << "1. 同意\n";
+            std::cout << "2. 拒绝\n";
+            std::cout << "0. 返回\n";
+
+            int op;
+
+            std::cout << "请选择：" << std::flush;
+
+            if(!(std::cin >> op))
+            {
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+                std::cout << "输入错误，请重新输入\n";
+                continue;
+            }
+            if(op == 0)
+            {
+                break;
+            }
+            if(op == 1)
+            {
+                client.acceptGroupJoinRequest(requestId);
+                break;
+            }
+
+            if(op == 2)
+            {
+                client.rejectGroupJoinRequest(requestId);
+                break;
+            }
+
+            std::cout << "选择无效\n";
+        }
+    }
+}
+void groupMemberMenu(Client& client,int64_t groupId)
+{
+    while(true)
+    {
+        std::cout << R"(
+
+========== 群成员 ==========
+1. 查看成员
+0. 返回
+============================
+
+)";
+
+        int op;
+        std::cout << "请选择：" << std::flush;
+        if(!(std::cin >> op))
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "输入错误，请重新输入\n";
+            continue;
+        }
+
+        if(op == 0)
+            return;
+
+        if(op == 1)
+        {
+            client.groupMemberList(groupId);
+            client.waitGroupMemberList();
+
+            const auto& members = client.groupMembers();
+
+          
+            std::cout << "\n========== 群成员 ==========\n";
+
+            if(members.empty())
+            {
+                std::cout << "暂无成员\n";
+                continue;
+            }
+
+            int index = 1;
+
+        for(const auto& member : members)
+        {
+            int userId =member.value("userId",0);
+
+            std::string username =member.value("nickname", member.value("username", ""));
+
+            int role =member.value("role",0);
+            std::cout<< index<< ". 【用户ID】: "<< userId<< "  "<<"【用户名】："<<username;
+
+            if(role ==static_cast<int>(GroupRole::Owner))
+            {
+                    std::cout << "[群主]";
+            }
+            else if(role ==static_cast<int>(GroupRole::Admin))
+            {
+                    std::cout << "[管理员]";
+             }
+             else
+            {
+                    std::cout << "[成员]";
+            }
+
+                std::cout << "\n";
+                ++index;
+        }
+        std::cout << "0. 返回\n";
+        std::cout << "请选择成员：" << std::flush;
+
+        int choice;
+        if(!(std::cin >> choice))
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+            std::cout << "输入错误，请重新输入\n";
+            continue;
+        }
+
+        if(choice == 0)
+            return;
+
+        if(choice < 1 ||choice > static_cast<int>(members.size()))
+        {
+            std::cout << "选择无效\n";
+            continue;
+        }
+
+        const auto& member =members[choice - 1];
+        int64_t userId =member.value("userId", 0);
+        std::string username = member.value("nickname",member.value("username", ""));
+        groupMemberActionMenu(client,groupId,userId, username);
+       }
+    }
+}
+void groupMemberActionMenu(Client& client,int64_t groupId,int64_t userId,const std::string& username)
+{
+    while(true)
+    {
+        std::cout<< "\n========== 成员管理 ==========\n";
+
+        std::cout << "成员: "<< username<< " (" << userId<< ")\n";
+
+        std::cout << "1. 设置为管理员\n";
+        std::cout << "2. 取消管理员\n";
+        std::cout << "3. 移除成员\n";
+        std::cout << "0. 返回\n";
+        int op;
+        std::cout << "请选择：";
+        if(!(std::cin >> op))
+        {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+            continue;
+        }
+        switch(op)
+        {
+        case 1:
+            client.setGroupMemberRole(groupId,userId,GroupRole::Admin);
+            return;
+
+        case 2:
+            client.setGroupMemberRole(  groupId,userId,GroupRole::Member);
+            return;
+        case 3:
+            client.removeGroupMember(groupId,userId);
+
+            return;
+
+        case 0:
+            return;
+
+        default:
+            std::cout << "选择无效\n";
+            break;
         }
     }
 }

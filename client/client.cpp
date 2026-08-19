@@ -4,6 +4,7 @@
 #include <iostream>
 #include <algorithm>
 #include "../common/protocol/Jsoncodec.h"
+#include <algorithm>
 Client::Client(EventLoop* loop):loop_(loop),tcpClient_(std::make_unique<TcpClient>(loop))
 {
 
@@ -13,6 +14,29 @@ Client::~Client()
 
 }
 
+constexpr int CHAT_WIDTH = 70;
+void Client::printChatMessage( uint32_t senderId,uint32_t currentUserId,const std::string& senderName,const std::string& content)
+{
+    std::string text;
+    if(senderId == currentUserId)
+    {
+     text = "我：" + content;
+     int padding =CHAT_WIDTH - static_cast<int>(text.size());
+
+     if(padding > 0)
+     {
+         std::cout << std::string(padding, ' ');
+     }
+        std::cout << text << '\n';
+    }
+    else
+    {
+    text = senderName + "：" + content;
+    std::cout << text << '\n';
+    }
+}
+
+
 bool Client::connect(const std::string& ip, uint16_t port)
 {
     if(!tcpClient_->connect(ip,port))
@@ -20,9 +44,7 @@ bool Client::connect(const std::string& ip, uint16_t port)
         return false;
     }
     connection_=tcpClient_->connection();
-    std::cout<<"connection="
-             <<(connection_?"ok":"null")
-             <<std::endl;
+    std::cout<<"connection=" <<(connection_?"ok":"null")<<std::endl;
 
     if(!connection_)
     {
@@ -121,14 +143,6 @@ void Client::sendResetCode(const std::string& email)
     msg.setType(Messagetype::SendResetCode);
     msg.payload()["email"] = email;
 
-
-    std::cout << "[Client] reset code type="
-              << static_cast<int>(msg.type())
-              << std::endl;
-
-    std::cout << "[Client] reset code json="
-              << JsonCodec::encode(msg)
-              << std::endl;
     connection_->send(msg);
 }
 
@@ -255,6 +269,12 @@ void Client::privateChat(uint32_t receiverId,const std::string& text)
     if(!connection_)
     return;
 
+    if (isFriendBlock(receiverId))
+    {
+        std::cout << "该好友已被屏蔽，无法进入聊天"  << std::endl;
+        return;
+    }
+
     Message msg;
     msg.setType(Messagetype::PrivateChat);
     msg.setSequence(sequence_++);
@@ -312,7 +332,11 @@ void Client::sendPrivateFile(uint32_t userId,const std::string& filename)
 {
     if(!login_)
     return;
-
+     if (isFriendBlock(userId))
+    {
+        std::cout << "该好友已被屏蔽，无法发送文件"  << std::endl;
+        return;
+    }
     if(fileTransfer_)
     {
         fileTransfer_->sendPrivateFile(userId,filename);
@@ -346,6 +370,10 @@ void Client::friendList()
     if(!connection_ || !login_)
     {
         return;
+    }
+    {
+        std::lock_guard<std::mutex> lock(friendListMutex_);
+        friendListFinished_=false;
     }
     Message msg;
     msg.setType(Messagetype::FriendList);
@@ -385,8 +413,17 @@ void Client::quit()
 {
     loop_->quit();
 }
-void Client::privateHistory(uint32_t userid)
+void Client::privateHistory(uint32_t userid,const std::string& username)
 {
+    if(!connection_)
+        return;
+
+     if (isFriendBlock(userid))
+    {
+        std::cout << "该好友已被屏蔽，无法查看历史"  << std::endl;
+        return;
+    }
+    currentHistoryPeerName_=username;
     Message msg;
     msg.setType(Messagetype::HistoryRequest);
     msg.payload()["type"]=1;
@@ -397,17 +434,21 @@ void Client::privateHistory(uint32_t userid)
 }
 void Client::groupHistory(uint32_t gid)
 {
+
+    if(!connection_)
+        return;
+
     Message msg;
     msg.setType(Messagetype::HistoryRequest);
+     msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
     msg.payload()["type"]=2;
     msg.payload()["groupId"]=gid;
     connection_->send(msg);
 }
 void Client::onMessage(const Message& msg)
 {
-    std::cout << "client receive message type="<< static_cast<int>(msg.type())<< std::endl;
-
-    //std::cout << "[Client] payload = "<< msg.payload().dump(4)<< std::endl;
+   
    switch(msg.type())
    {
     case Messagetype::RegisterResponse: handleRegister(msg); break;
@@ -541,7 +582,7 @@ void Client::onMessage(const Message& msg)
         std::cout << "message send failed: "<< payload.value("message", "") << std::endl;
         break;
     }
-     std::cout << "message send success" << std::endl;
+    
      if(payload.contains("fileId"))
     {
         if(fileTransfer_)
@@ -573,6 +614,194 @@ void Client::onMessage(const Message& msg)
      handleOfflineFileNotify(msg);
     break;
     }
+    case Messagetype::BlockFriendResponse:
+    {
+        const auto& payload=msg.payload();
+        int code=payload.value("code",-1);
+        if(code==0)
+        {
+          std::cout<<"已经屏蔽好友\n";
+          uint32_t friendId=payload.value("friendId",0u);
+         for(auto& friendUser:friends_)
+         {
+            if(friendUser.value("id",0u)==friendId)
+            {
+                friendUser["blocked"]=true;
+                break;
+            }
+         }
+        }
+        else
+        {
+            std::cout<<"屏蔽好友失败: "<<payload.value("message","")<<'\n';
+        }
+       break; 
+    }
+    case Messagetype::UnblockFriendResponse:
+    {
+        const auto& payload=msg.payload();
+        int code=payload.value("code",-1);
+        if(code==0)
+        {
+          std::cout<<"已经取消屏蔽好友\n";
+          uint32_t friendId=payload.value("friendId",0u);
+         for(auto& friendUser:friends_)
+         {
+            if(friendUser.value("id",0u)==friendId)
+            {
+                friendUser["blocked"]=false;
+                break;
+            }
+         }
+        }
+        else
+        {
+            std::cout<<"取消屏蔽好友失败: "<<payload.value("message","")<<'\n';
+        }
+        break;
+    }
+
+   case Messagetype::AcceptFriendResponse:
+   case Messagetype::RejectFriendResponse:
+   case Messagetype::FriendRequestListResponse:
+   handleFriend(msg);
+   break;
+
+   case Messagetype::GroupMemberListResponse:
+   {
+    const auto& payload = msg.payload();
+
+       int code = payload.value("code", -1);
+    {
+        std::lock_guard<std::mutex> lock(groupMemberMutex_);
+        groupMembers_.clear();
+
+        if(payload.contains("members") && payload["members"].is_array())
+        {
+            for(const auto& member : payload["members"])
+            {
+                groupMembers_.push_back(member);
+            }
+        }
+        groupMemberFinished_ = true;
+    }
+
+     if(code != 0)
+    {
+        std::cout << "获取群成员失败："<< payload.value("message", "")<< '\n';
+    }
+    groupMemberCv_.notify_one();
+
+    break;
+   }
+    case Messagetype::GroupJoinRequestListResponse:
+     {
+    const auto& payload = msg.payload();
+
+    {
+        std::lock_guard<std::mutex> lock(groupJoinRequestMutex_);
+
+        groupJoinRequests_.clear();
+        if(payload.contains("requests") &&
+           payload["requests"].is_array())
+        {
+            for(const auto& request : payload["requests"])
+            {
+                groupJoinRequests_.push_back(request);
+            }
+        }
+        groupJoinRequestFinished_ = true;
+    }
+    groupJoinRequestCv_.notify_one();
+    break;
+    }
+    case Messagetype::AcceptGroupJoinRequestResponse:
+   {
+    const auto& payload = msg.payload();
+    int code = payload.value("code", -1);
+    if(code == 0)
+    {
+        std::cout << "已接受入群申请\n";
+    }
+    else
+    {
+        std::cout << "接受入群申请失败："<< payload.value("message", "") << '\n';
+    }
+    break;
+   }
+   case Messagetype::RejectGroupJoinRequestResponse:
+  {
+    const auto& payload = msg.payload();
+    int code = payload.value("code", -1);
+    if(code == 0)
+    {
+        std::cout << "已拒绝入群申请\n";
+    }
+    else
+    {
+        std::cout << "拒绝入群申请失败：" << payload.value("message", "")<< '\n';
+    }
+    break;
+   }
+   case Messagetype::SetGroupAdminResponse:
+   {
+    const auto& payload = msg.payload();
+    int code = payload.value("code", -1);
+    if(code == 0)
+    {
+        int role = payload.value("role", 0);
+
+        if(role == static_cast<int>(GroupRole::Admin))
+        {
+            std::cout << "已设置为管理员\n";
+        }
+        else
+        {
+            std::cout << "已取消管理员\n";
+        }
+    }
+    else
+    {
+        std::cout << "设置成员角色失败："<< payload.value("message", "") << '\n';
+    }
+
+    break;
+    }
+    case Messagetype::RemoveGroupMemberResponse:
+   {
+    const auto& payload = msg.payload();
+    int code = payload.value("code", -1);
+    if(code == 0)
+    {
+        std::cout << "已移除群成员\n";
+    }
+    else
+    {
+        std::cout << "移除群成员失败："<< payload.value("message", "")<< '\n';
+    }
+    break;
+   }
+   case Messagetype::DeleteAccountResponse:
+   {
+    bool success = false;
+    if(msg.payload().contains("success"))
+    {
+        success = msg.payload()["success"].get<bool>();
+    }
+    std::string reason;
+    if(msg.payload().contains("reaseon"))
+    {
+        reason=msg.payload()["reason"].get<std::string>();
+    }
+    {
+        std::lock_guard<std::mutex> lock(deleteAccountResultMutex_);
+        deleteAccountResult_ = success;
+        deleteAccountFinished_ = true;
+    }
+    waitDeleteAccountCv_.notify_all();
+    break;
+     }
+
 
     default:
     std::cout<<"unknow message type"<<std::endl;
@@ -667,18 +896,139 @@ void Client::handleLogout(const Message& msg)
 void Client::handlePrivateChat(const Message& msg)
 {
    const auto& payload=msg.payload();
-   std::string text=payload.value("content","");
-   std::cout<<"[Private]"<<msg.senderId()<<":"<<text<<std::endl;
+     if(msg.type() == Messagetype::PrivateChatResponse )//&&  !payload.value("unreadDone", false))
+   {
+    if(payload.contains("code"))
+    {
+        int code = payload.value("code", -1);
+        if(code != 0)
+        {
+            std::cout << payload.value( "message","无法进入聊天") << std::endl;
+            leaveChat();
+            return;
+        }
+    }
+    {
+        // 服务器已经响应
+       
+            std::lock_guard<std::mutex> lock(chatMutex_);
+            chatMode_ = ChatMode::Private;
+        
+    }
+    }
+     uint32_t senderId = msg.senderId();
+     uint32_t receiverId =msg.receiverId();
+    
+     uint32_t peerId = 0;
+     if(senderId == userId_)
+    {
+    peerId = receiverId;
+    }
+    else
+    {
+    peerId = senderId;
+     }
+     if (isFriendBlock(peerId))
+    {
+        std::cout << "该好友已被屏蔽，无法进入聊天"  << std::endl;
+        return;
+    }
+      if(payload.value("unreadDone", false))
+    {
+       
+
+        PrivateChatRead(peerId);
+        clearLocalUnreadCount(peerId);
+
+        return;
+    }
+   std::string content=payload.value("content","");
+    bool unread =payload.value("unread", false);
+
+    ChatMode mode;
+    uint32_t chatId;
+    std::string peerName;
+
+    {
+        std::lock_guard<std::mutex> lock(chatMutex_);
+
+        mode = chatMode_;
+        chatId = currentChatId_;
+        peerName = currentChatPeerName_;
+    }
+     //std::cout<< "[PrivateChat] " << "mode=" << static_cast<int>(mode) << " chatId=" << chatId<< " senderId=" << senderId<< " receiverId=" << receiverId<< " unread=" << unread<< " content=" << content << std::endl;
+    if(mode == ChatMode::Private && (chatId == senderId|| receiverId==chatId))
+    {
+        
+        {
+            std::lock_guard<std::mutex> lock(chatOutputMutex_);
+         std::cout << '\n';
+         std::string senderName;
+
+        if(senderId == userId_)
+        {
+            senderName = "我";
+        }
+        else
+        {
+            senderName =payload.value("senderName",peerName);
+             if(senderName.empty())
+            {
+                senderName = peerName;
+            }
+
+            if(senderName.empty())
+            {
+                senderName = "用户" + std::to_string(senderId);
+            }
+        }
+       printChatMessage(senderId,userId_,senderName,content);
+        }
+    
+
+       return;
+    }
+    if(!unread)
+    {
+        return;
+    }
+   
 
 }
 void Client::handleGroupChat(const Message& msg)
 {
+   
     const auto& payload=msg.payload();
 
     uint32_t groupId=payload.value("groupId",0u);
-    std::string content=payload.value("content","");
-    std::cout<<"[Group"<<groupId<<"]"<<msg.senderId()<<":"<<content<<std::endl;
+    uint32_t senderId = msg.senderId();
 
+    
+    std::string content=payload.value("content","");
+    std::string senderName =payload.value("senderName","用户" + std::to_string(senderId));
+
+    ChatMode mode;
+    uint32_t currentGroupId;
+
+    {
+        std::lock_guard<std::mutex> lock(chatMutex_);
+        mode = chatMode_;
+        currentGroupId = currentChatId_;
+    }
+    if(mode != ChatMode::Group ||currentGroupId != groupId)
+    {
+        std::lock_guard<std::mutex> lock(chatOutputMutex_);
+      
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(chatOutputMutex_);
+         std::cout << '\n';
+        printChatMessage(senderId, userId_, senderName, content);
+       
+    }
+ 
 }
 void Client::handleFriend(const Message& msg)
 {
@@ -720,6 +1070,11 @@ void Client::handleFriend(const Message& msg)
         break;
     }
      friends_= payload["friends"];
+     {
+        std::lock_guard<std::mutex> lock(friendListMutex_);
+        friendListFinished_=true;
+     }
+     friendListCv_.notify_one();
     if(friends_.empty())
     {
         std::cout << "你还没有好友" << std::endl;
@@ -728,10 +1083,32 @@ void Client::handleFriend(const Message& msg)
     std::cout << "\n========== 好友列表 ==========\n";
     for(const auto& friendUser : friends_)
     {
-           bool online = friendUser.value("online", false);
-        std::cout<< "id: " << friendUser.value("id", 0)<< "\nusername: " << friendUser.value("username", "")<< "\nnickname: " << friendUser.value("nickname", "")<< "\nstatus: " << friendUser.value("status", 0)
-        << "\nonline: " << (online ? "在线" : "离线")<< '\n'
-         << "\n-----------------------------\n";
+        
+     bool online = friendUser.value("online", false);
+     std::cout<< "id: " << friendUser.value("id", 0)<< "\nusername: " << friendUser.value("username", "");
+     bool blocked =friendUser.value("blocked", false);
+     bool blockedByFriend =friendUser.value("blockedByFriend", false);
+
+     if(blocked)
+    {
+    std::cout << " 【我已屏蔽】\n";
+    }
+
+    if(blockedByFriend)
+    {
+    std::cout << " 【对方已屏蔽我】\n";
+    }
+        std::cout<<"\nnickname: " << friendUser.value("nickname", "")<< "\nstatus: " << friendUser.value("status", 0)
+        << "\nonline: " << (online ? "在线" : "离线")<< '\n';
+        uint32_t friendId = friendUser.value("id", 0);
+
+        size_t unreadCount = friendUser.value("unreadCount",0);
+        if(unreadCount > 0)
+        {
+            std::cout << "未读消息: "<< unreadCount << "条\n";
+        }
+      
+         std::cout<< "\n-----------------------------\n";
     }
     std::cout << "==============================\n";
     std::cout << "\n0. 返回\n";
@@ -739,6 +1116,48 @@ void Client::handleFriend(const Message& msg)
     break;
     }
     
+    case Messagetype::FriendRequestListResponse:
+   {
+    if(!payload.contains("requests") || !payload["requests"].is_array())
+    {
+        std::cout << "好友申请列表为空\n";
+
+        {
+            std::lock_guard<std::mutex> lock(friendRequestMutex_);
+            friendRequests_ = nlohmann::json::array();
+            friendRequestFinished_ = true;
+        }
+
+        friendRequestCv_.notify_one();
+
+        break;
+    }
+
+    friendRequests_ = payload["requests"];
+
+    {
+        std::lock_guard<std::mutex> lock(friendRequestMutex_);
+        friendRequestFinished_ = true;
+    }
+    friendRequestCv_.notify_one();
+
+    break;
+   }
+   case Messagetype::AcceptFriendResponse:
+  {
+    int code = payload.value("code", -1);
+
+    if(code == 0)
+    {
+        std::cout << "已同意好友申请\n";
+    }
+    else
+    {
+        std::cout<< "同意好友申请失败: "<< payload.value("message", "")<< '\n';
+    }
+
+    break;
+    }
     default:
     break;
    }
@@ -839,6 +1258,7 @@ void Client::handleGroupList(const Message& msg)
 {
     const auto& payload = msg.payload();
     int code = payload.value("code", -1);
+
     if(code != 0)
     {
         std::cout << "获取群列表失败 " << payload.value("message", "") << std::endl;
@@ -866,30 +1286,56 @@ void Client::handleGroupList(const Message& msg)
     std::cout<<"请选择群ID："<<std::flush;
 }
 
-
 void Client::handleHistory(const Message& msg)
 {
     auto& payload=msg.payload();
+     int code = payload.value("code", -1);
+    
+    if(code != 0)
+    {
+        std::cout << "无法查看历史记录 " << payload.value("message", "") << std::endl;
+        return;
+    }
     if(!payload.contains("message"))
     {
         std::cout<<"history empty\n";
+        return;
     }
     auto messages=payload["message"];
-    std::reverse(messages.begin(),messages.end());
-  
+
     if(!messages.is_array())
     {
         std::cout<<"messages not array\n";
         return;
     }
     std::reverse(messages.begin(),messages.end());
+    int historyType=payload.value("type",1);
+
     std::cout<<"======== 历史消息 ========\n";
     for(auto&it:messages)
     {
 
         uint32_t senderId=it["senderId"];
         std::string content=it["content"];
-        std::cout<<"["<<senderId<<"]"<<content<<std::endl;
+        std::string senderName;
+        if(senderId==userId_)
+        {
+            senderName="我";
+        }
+        else if(historyType==1)
+        {
+            senderName=currentHistoryPeerName_;
+            if(senderName.empty())
+            {
+              senderName="用户"+std::to_string(senderId);
+            }
+        }
+        else
+        {
+            senderName=it.value("senderName","用户"+std::to_string(senderId));
+        }
+        printChatMessage(senderId,userId_,senderName,content);
+        
     }
 
     std::cout<<"==========================\n";
@@ -939,11 +1385,8 @@ void Client::registerUser(const std::string& username,const std::string& passwor
     }
 
     Message msg;
-
     msg.setType(Messagetype::Register);
-
     msg.setSequence(sequence_++);
-
     msg.payload()["username"] = username;
     msg.payload()["password"] = password;
     msg.payload()["email"] = email;
@@ -957,4 +1400,383 @@ void Client::registerUser(const std::string& username,const std::string& passwor
     }
 
     connection_->send(msg);
+}
+void Client::enterPrivateChat(uint32_t friendid,const std::string& friendname)
+{
+
+    if(!connection_ || !login_)
+        return;
+
+    if (isFriendBlock(friendid))
+    {
+        std::cout << "该好友已被屏蔽，无法进入聊天"
+                  << std::endl;
+        return;
+    }
+
+    {std::lock_guard<std::mutex> lock(chatMutex_);
+
+    currentChatId_ = friendid;
+     currentChatPeerName_ = friendname;
+    }
+   
+    Message msg;
+    msg.setType(Messagetype::PrivateUnreadRequest);
+     msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setReceiverId(friendid);
+    msg.payload()["peerId"] = friendid;
+
+    connection_->send(msg);
+    
+}
+void Client::enterGroupChat(uint32_t groupid)
+{
+    std::lock_guard<std::mutex> lock(chatMutex_);
+
+    chatMode_ = ChatMode::Group;
+    currentChatId_ = groupid;
+}
+void Client::PrivateChatRead(uint32_t friendid)
+{
+    if(!connection_ || !login_)
+        return;
+
+    Message msg;
+
+    msg.setType(Messagetype::PrivateChatRead);
+    msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setReceiverId(friendid);
+    msg.setTimestamp(time(nullptr));
+    
+       msg.payload()["peerId"] = friendid;
+    connection_->send(msg);
+}
+void Client::clearLocalUnreadCount(uint32_t friendid)
+{
+    for(auto& friendUser : friends_)
+    {
+        if(friendUser.value("id", 0u) == friendid)
+        {
+            friendUser["unreadCount"] = 0;
+            break;
+        }
+    }
+}
+void Client::leaveChat()
+{
+    std::lock_guard<std::mutex> lock(chatMutex_);
+
+    chatMode_ = ChatMode::None;
+    currentChatId_ = 0;
+     currentChatPeerName_.clear();
+}
+
+bool Client::inChat() const
+{
+    std::lock_guard<std::mutex> lock(chatMutex_);
+
+    return chatMode_ != ChatMode::None;
+}
+
+Client::ChatMode Client::chatMode() const
+{
+    std::lock_guard<std::mutex> lock(chatMutex_);
+
+    return chatMode_;
+}
+
+uint32_t Client::currentChatId() const
+{
+    std::lock_guard<std::mutex> lock(chatMutex_);
+
+    return currentChatId_;
+}
+void Client::blockFriend(uint32_t friendId)
+{
+    if(!connection_ ||! login_)
+    {
+        return;
+    }
+    if(friendId==userId_)
+    {
+        std::cout<<"不能屏蔽自己\n";
+        return;
+    }
+    if(isFriendBlock(friendId))
+    {
+        std::cout<<"该好友已经被屏蔽\n";
+        return;
+    }
+    Message msg;
+    msg.setType(Messagetype::BlockFriend);
+    msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setTimestamp(time(nullptr));
+    msg.payload()["friendId"]=friendId;
+    connection_->send(msg);
+
+}
+void Client::unblockFriend(uint32_t friendId)
+{
+
+    if(!connection_ ||! login_)
+    {
+        return;
+    }
+    if(!isFriendBlock(friendId))
+    {
+        std::cout<<"该好友当前没有被屏蔽\n";
+        return;
+    }
+
+     Message msg;
+    msg.setType(Messagetype::UnblockFriend);
+    msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setTimestamp(time(nullptr));
+    msg.payload()["friendId"]=friendId;
+    connection_->send(msg);
+  
+    
+}
+bool Client::isFriendBlock(uint32_t friendId) const
+{
+    for(const auto& friendUser : friends_)
+    {
+        if(friendUser.value("id", 0u) == friendId)
+        {
+            return friendUser.value("blocked", false);
+        }
+    }
+
+    return false;
+}
+bool Client::isFriendBlockedEitherWay(uint32_t friendId) const
+{
+    for(const auto& friendUser : friends_)
+    {
+        if(friendUser.value("id", 0u) == friendId)
+        {
+            bool blocked = friendUser.value("blocked", false);
+            bool blockedByFriend =
+                friendUser.value("blockedByFriend", false);
+
+            return blocked || blockedByFriend;
+        }
+    }
+
+    return false;
+}
+void Client::waitFriendList()
+{
+    std::unique_lock<std::mutex> lock(friendListMutex_);
+
+    friendListCv_.wait(
+        lock,
+        [this]
+        {
+            return friendListFinished_;
+        });
+
+    friendListFinished_ = false;
+}
+void Client::friendRequestList()
+{
+    if(!connection_ || !login_)
+    {
+        return;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(friendRequestMutex_);
+
+        friendRequestFinished_ = false;
+    }
+
+    Message msg;
+    msg.setType(Messagetype::FriendRequestList);
+    msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setTimestamp(time(nullptr));
+    connection_->send(msg);
+}
+
+bool Client::waitFriendRequestList()
+{
+    std::unique_lock<std::mutex> lock(friendRequestMutex_);
+    friendRequestCv_.wait(lock, [this] { return friendRequestFinished_; });
+    friendRequestFinished_ = false;
+    return true;
+}
+void Client::acceptFriend(uint32_t requestId)
+{
+    if(!connection_ || !login_)
+    {
+        return;
+    }
+
+    Message msg;
+    msg.setType(Messagetype::AcceptFriend);
+    msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setTimestamp(time(nullptr));
+    msg.payload()["requestId"] = requestId;
+
+    connection_->send(msg);
+}
+void Client::rejectFriend(uint32_t requestId)
+{
+    if(!connection_ || !login_)
+    {
+        return;
+    }
+
+    Message msg;
+    msg.setType(Messagetype::RejectFriend);
+    msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setTimestamp(time(nullptr));
+     msg.payload()["requestId"] = requestId;
+
+    connection_->send(msg);
+}
+void Client::groupJoinRequestList(int64_t groupId)
+{
+    if(!connection_ || !login_)
+    {
+        return;
+    }
+    Message msg;
+    msg.setType(Messagetype::GroupJoinRequestList);
+    msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setTimestamp(time(nullptr));
+    msg.payload()["groupId"] = groupId;
+    connection_->send(msg);
+}
+void Client::acceptGroupJoinRequest(int64_t requestId)
+{
+    if(!connection_ || !login_)
+    {
+        return;
+    }
+
+    Message msg;
+    msg.setType(Messagetype::AcceptGroupJoinRequest);
+    msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setTimestamp(time(nullptr));
+    msg.payload()["requestId"] = requestId;
+    connection_->send(msg);
+}
+void Client::rejectGroupJoinRequest(int64_t requestId)
+{
+    if(!connection_ || !login_)
+    {
+        return;
+    }
+    Message msg;
+    msg.setType(Messagetype::RejectGroupJoinRequest);
+    msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setTimestamp(time(nullptr));
+    msg.payload()["requestId"] = requestId;
+    connection_->send(msg);
+}
+void Client::setGroupMemberRole(int64_t groupId,int userId, GroupRole role)
+{
+    if(!connection_ || !login_)
+    {
+        return;
+    }
+    Message msg;
+    msg.setType(Messagetype::SetGroupAdmin);
+    msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setTimestamp(time(nullptr));
+    msg.payload()["groupId"] = groupId;
+    msg.payload()["userId"] = userId;
+    msg.payload()["role"] = static_cast<int>(role);
+    connection_->send(msg);
+}
+void Client::removeGroupMember(int64_t groupId,int userId)
+{
+    if(!connection_ || !login_)
+    {
+        return;
+    }
+
+    Message msg;
+    msg.setType(Messagetype::RemoveGroupMember);
+    msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setTimestamp(time(nullptr));
+    msg.payload()["groupId"] = groupId;
+    msg.payload()["userId"] = userId;
+
+    connection_->send(msg);
+}
+bool Client::waitGroupMemberList()
+{
+    std::unique_lock<std::mutex> lock(groupMemberMutex_);
+
+    groupMemberCv_.wait(
+        lock,[this] { return groupMemberFinished_;});
+
+    groupMemberFinished_ = false;
+
+    return true;
+}
+bool Client::waitGroupJoinRequestList()
+{
+    std::unique_lock<std::mutex> lock(groupJoinRequestMutex_);
+
+    groupJoinRequestCv_.wait(lock,[this] {return groupJoinRequestFinished_;});
+
+    groupJoinRequestFinished_ = false;
+
+    return true;
+}
+void Client::groupMemberList(std::int64_t groupId)
+{
+    if(!connection_ || !login_)
+    {
+        return ;
+    }
+
+    Message msg;
+    msg.setType(Messagetype::GroupMemberList);
+    msg.setSequence(sequence_++);
+    msg.setSenderId(userId_);
+    msg.setTimestamp(time(nullptr));
+    msg.payload()["groupId"] = groupId;
+
+    connection_->send(msg);
+
+    return ;
+}
+void Client::deleteAccount()
+{
+    {
+        std::lock_guard<std::mutex> lock(deleteAccountResultMutex_);
+        deleteAccountFinished_ = false;
+        deleteAccountResult_ = false;
+    }
+    Message msg;
+    msg.setType(Messagetype::DeleteAccount);
+    msg.setSenderId(userId_);
+
+    connection_->send(msg);
+}
+bool Client::waitDeleteAccountResult()
+{
+    std::unique_lock<std::mutex> lock(deleteAccountResultMutex_);
+
+    waitDeleteAccountCv_.wait(lock, [this] {
+        return deleteAccountFinished_;
+    });
+
+    return deleteAccountResult_;
 }
