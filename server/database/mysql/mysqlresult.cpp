@@ -1,6 +1,7 @@
 #include "mysqlresult.h"
 #include<cstring>
 #include <iostream>
+#include <algorithm>
 MysqlResult::MysqlResult(MYSQL_STMT* stmt):stmt_(stmt)
 {
 
@@ -23,8 +24,31 @@ MysqlResult::~MysqlResult()
     if(metadata_)
     {
         mysql_free_result(metadata_);
+        metadata_=nullptr;
     }
 }
+bool MysqlResult::isStringType(enum_field_types type) const
+{
+    switch (type)
+    {
+    case MYSQL_TYPE_STRING:
+    case MYSQL_TYPE_VAR_STRING:
+    case MYSQL_TYPE_VARCHAR:
+
+    case MYSQL_TYPE_TINY_BLOB:
+    case MYSQL_TYPE_MEDIUM_BLOB:
+    case MYSQL_TYPE_LONG_BLOB:
+    case MYSQL_TYPE_BLOB:
+
+    case MYSQL_TYPE_JSON:
+
+        return true;
+
+    default:
+        return false;
+    }
+}
+
 void MysqlResult::bindResult()
 {
    if(!metadata_)
@@ -83,15 +107,20 @@ void MysqlResult::bindResult()
     case MYSQL_TYPE_STRING:
     case MYSQL_TYPE_VAR_STRING:
     case MYSQL_TYPE_VARCHAR:
+    case MYSQL_TYPE_TINY_BLOB:
+    case MYSQL_TYPE_MEDIUM_BLOB:
+    case MYSQL_TYPE_LONG_BLOB:
     case MYSQL_TYPE_BLOB:
-    buffers_[i].resize(std::min(fields[i].length+1,kMaxBuffer));
+    case MYSQL_TYPE_JSON:
+    buffers_[i].resize(std::min<std::size_t>(fields[i].length+1,kMaxBuffer));
     break;
 
     default:
-    buffers_[i].resize(std::min(fields[i].length+1,kMaxBuffer));
+    buffers_[i].resize(std::min<std::size_t>(fields[i].length+1,kMaxBuffer));
     break;
 
   }
+  std::memset(&bind,0,sizeof(MYSQL_BIND));
   bind.buffer_type = fields[i].type;
   bind.buffer = buffers_[i].data();
   bind.buffer_length =static_cast<unsigned long>(buffers_[i].size());
@@ -105,6 +134,41 @@ void MysqlResult::bindResult()
     throw std::runtime_error(mysql_stmt_error(stmt_));
     }
 }
+bool MysqlResult::fetchLongColumn(int index)
+{
+    if (index < 0 ||
+        index >= static_cast<int>(buffers_.size()))
+    {
+        return false;
+    }
+
+    if (nullFlags_[index])
+    {
+        return true;
+    }
+    const unsigned long actualLength = lengths_[index];
+    if (actualLength <= buffers_[index].size())
+    {
+        return true;
+    }
+    std::cout<< "[MysqlResult] long field detected"<< " index=" << index  << " length=" << actualLength<< " oldBuffer=" << buffers_[index].size() << std::endl;
+    buffers_[index].resize(static_cast<std::size_t>(  actualLength) + 1);
+    MYSQL_BIND bind{};
+    bind.buffer_type = types_[index];
+    bind.buffer = buffers_[index].data();
+    bind.buffer_length =static_cast<unsigned long>( buffers_[index].size()   );
+    bind.length =  &lengths_[index];
+    bind.is_null =reinterpret_cast<bool*>(&nullFlags_[index]);
+
+    if (mysql_stmt_fetch_column( stmt_,&bind,static_cast<unsigned int>(index),0 ) != 0)
+    {
+        std::cerr<< "mysql_stmt_fetch_column failed: "  << mysql_stmt_error(stmt_) << std::endl;
+
+        return false;
+    }
+    return true;
+}
+
 bool MysqlResult::fetch()
 {
     if (!stmt_)
@@ -112,12 +176,10 @@ bool MysqlResult::fetch()
         return false;
     }
     int ret = mysql_stmt_fetch(stmt_);
-    std::cout<<"mysql_stmt_fetch ret="
-         <<ret
-         <<std::endl;
+    std::cout<<"mysql_stmt_fetch ret="<<ret <<std::endl;
     if (ret == 0)
     {
-        for(size_t i=0;i<buffers_.size();i++)
+        for(size_t i=0;i<buffers_.size();++i)
     {
         std::cout<<"field " <<i<<" length="<<lengths_[i] <<" null="<<(int)nullFlags_[i]<<std::endl;
     }
@@ -126,6 +188,33 @@ bool MysqlResult::fetch()
     if (ret == MYSQL_NO_DATA)
     {
         return false;
+    }
+    if (ret == MYSQL_DATA_TRUNCATED)
+   {
+    std::cerr << "mysql_stmt_fetch: MYSQL_DATA_TRUNCATED" << std::endl;
+    for (size_t i = 0; i < buffers_.size(); ++i)
+    {
+        if(nullFlags_[i])
+        {
+            continue;
+        }
+        if(lengths_[i]>buffers_[i].size())
+        {
+            if(!isStringType(types_[i]))
+            {
+               
+          std::cerr<< "[MysqlResult] "<< "unexpected truncated "   << "non-string field "   << "index="<< i<< std::endl;
+        throw std::runtime_error("MysqlResult: "  "unexpected data truncation");
+            }
+            if(!fetchLongColumn(static_cast<int>(i)))
+            {
+                throw std::runtime_error( "MysqlResult: " "fetch long column failed");
+            }
+        }
+        
+    }
+
+    return true;
     }
     throw std::runtime_error(mysql_stmt_error(stmt_));
 }

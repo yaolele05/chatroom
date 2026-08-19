@@ -13,6 +13,10 @@ Chatserver::Chatserver(EventLoop* loop, const InetAddress& addr):loop_(loop),ser
     server_->setConnectionCallback(std::bind(&Chatserver::onConnection,this,std::placeholders::_1));
     server_->setMessageCallback(std::bind(&Chatserver::onMessage,this,std::placeholders::_1,std::placeholders::_2));
 }
+void Chatserver::setThreadNum(int num)
+{
+    server_->setThreadNum(num);
+}
 void Chatserver::start()
 {
     server_->start();

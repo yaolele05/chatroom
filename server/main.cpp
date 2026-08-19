@@ -95,7 +95,9 @@ int main(int argc, char* argv[])
 
     EventLoop loop;
     InetAddress addr(serverPort, serverIp);
+
     Chatserver server(&loop, addr);
+    server.setThreadNum(3);
     server.start();
 
     std::cout << "ChatServer started at "<< serverIp << ":" << serverPort << std::endl;

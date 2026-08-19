@@ -5,6 +5,7 @@
 #include <variant>
 #include <cstdint>
 #include <stdexcept>
+#include <cstddef>
 class MysqlResult
 {
 public:
@@ -28,9 +29,12 @@ public:
     bool isNull(int index) const;
 
 
+
 private:
 
     void bindResult();
+     bool isStringType(enum_field_types type) const;
+    bool fetchLongColumn(int index);
 
     MYSQL_STMT* stmt_{nullptr};
     MYSQL_RES* metadata_{nullptr};

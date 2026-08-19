@@ -119,9 +119,13 @@ void SessionManager::bindUser(UserSession* session)
         return;
 
     std::lock_guard<std::mutex> lock(mutex_);
-
-    useridsessions_[session->userid()] = connectionsessions_[session->connection().get()];
-    usernamesessions_[session->username()] = connectionsessions_[session->connection().get()];
+    auto it=connectionsessions_.find(session->connection().get());
+    if(it==connectionsessions_.end())
+    {
+        return;
+    }
+    useridsessions_[session->userid()] = it->second;
+    usernamesessions_[session->username()] = it->second;
 }
 void SessionManager::unbindUser(UserSession* session)
 {
