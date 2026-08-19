@@ -70,9 +70,7 @@ void enableEcho()
     termios tty;
 
     tcgetattr(STDIN_FILENO, &tty);
-
     tty.c_lflag |= ECHO;
-
     tcsetattr(STDIN_FILENO, TCSANOW, &tty);
 }
 int main(int argc, char* argv[])
@@ -596,6 +594,106 @@ void friendactionMenu(Client& client,int friendid,const std::string& friendname)
     }
     return;
 }
+
+static std::string readChatMessage()
+{
+    std::string message;
+
+    struct termios oldTermios;
+    struct termios newTermios;
+
+    tcgetattr(STDIN_FILENO, &oldTermios);
+
+    newTermios = oldTermios;
+
+    newTermios.c_lflag &= ~(ICANON | ECHO);
+
+    newTermios.c_cc[VMIN] = 1;
+    newTermios.c_cc[VTIME] = 0;
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &newTermios);
+
+    // 开启 bracketed paste
+    std::cout << "\033[?2004h";
+    std::cout.flush();
+
+    bool pasteMode = false;
+
+    while(true)
+    {
+        char c;
+        if(read(STDIN_FILENO, &c, 1) <= 0)
+        {
+            break;
+        }
+        if(c == '\033')
+        {
+            std::string seq;
+            seq += c;
+            char ch;
+            while(read(STDIN_FILENO, &ch, 1) > 0)
+            {
+                seq += ch;
+                if(ch == '~')
+                {
+                    break;
+                }
+                if(seq.size() >= 8)
+                {
+                    break;
+                }
+            }
+            if(seq == "\033[200~")
+            {
+                pasteMode = true;
+                continue;
+            }
+            if(seq == "\033[201~")
+            {
+                pasteMode = false;
+                continue;
+            }
+            continue;
+        }
+
+        if(pasteMode)
+        {
+        
+            message += c;
+            std::cout << c;
+            std::cout.flush();
+            continue;
+        }
+
+        if(c == '\n' || c == '\r')
+        {
+            std::cout << '\n';
+            break;
+        }
+        if(c == 127)
+        {
+            if(!message.empty())
+            {
+                message.pop_back();
+
+                std::cout << "\b \b";
+                std::cout.flush();
+            }
+
+            continue;
+        }
+        message += c;
+        std::cout << c;
+        std::cout.flush();
+    }
+
+    // 恢复终端
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldTermios);
+    // 关闭 bracketed paste
+    std::cout << "\033[?2004l";
+    std::cout.flush();
+    return message;
+}
 void privateChatLoop(Client& client,int friendid,const std::string& friendname)
 {
     client.enterPrivateChat(friendid,friendname);
@@ -610,13 +708,11 @@ void privateChatLoop(Client& client,int friendid,const std::string& friendname)
    
     while(true)
     {
-        std::string text;
+        std::string text=readChatMessage();
 
-        if(!std::getline(std::cin, text))
+        if(text.empty())
         {
-            std::cin.clear();
-             client.leaveChat();
-            return;
+           continue;
         }
 
         if(text == "/quit")
@@ -626,11 +722,7 @@ void privateChatLoop(Client& client,int friendid,const std::string& friendname)
             return;
         }
 
-        if(text.empty())
-        {
-            continue;
-        }
-
+       
         client.privateChat(friendid, text);
     }
 }
@@ -767,27 +859,18 @@ void groupChatLoop(Client& client, int groupid, const std::string& groupname)
     std::cout << "\n========================================\n";
     while(true)
     {
-        std::string text;
+        std::string text=readChatMessage();
 
-        disableEcho();
-        if(!std::getline(std::cin, text))
+        if(text.empty())
         {
-            std::cin.clear();
-              client.leaveChat();  
-            return;
+            continue;
         }
-
         if(text == "/quit")
         {
             client.leaveChat();
             std::cout << "已退出群聊\n";
             return;
         }
-        if(text.empty())
-        {
-            continue;
-        }
-
         client.groupChat(groupid, text);
     }
 }

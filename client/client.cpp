@@ -4,7 +4,10 @@
 #include <iostream>
 #include <algorithm>
 #include "../common/protocol/Jsoncodec.h"
-#include <algorithm>
+#include <termios.h>
+#include <unistd.h>
+#include <iostream>
+#include <string>
 Client::Client(EventLoop* loop):loop_(loop),tcpClient_(std::make_unique<TcpClient>(loop))
 {
 
@@ -35,7 +38,6 @@ void Client::printChatMessage( uint32_t senderId,uint32_t currentUserId,const st
     std::cout << text << '\n';
     }
 }
-
 
 bool Client::connect(const std::string& ip, uint16_t port)
 {
