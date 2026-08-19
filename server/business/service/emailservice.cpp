@@ -14,9 +14,7 @@ bool EmailService::send(const std::string& to,const std::string& subject,const s
 {
     const char* username=std::getenv("CHATROOM_SMTP_USER");
     const char* password=std::getenv("CHATROOM_SMTP_PASSWORD");
-    std::cout << "[EmailService] username="
-          << (username ? username : "NULL")
-          << std::endl;
+    std::cout << "[EmailService] username=" << (username ? username : "NULL")<< std::endl;
 
     std::cout << "[EmailService] password="
           << (password ? "SET" : "NULL")

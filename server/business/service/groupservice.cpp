@@ -9,6 +9,7 @@
 #include"../../session/sessionmanager.h"
 #include "../../model/offlinemodel.h"
 #include <iostream>
+#include "../../model/usermodel.h"
 GroupService& GroupService::instance()
 {
     static GroupService service;
@@ -39,6 +40,33 @@ void GroupService::rigisterHandler()
 {
     GroupService::instance().groupList(message,session);
 });
+
+ dispatcher.registerHandler(Messagetype::GroupMemberList,[](const Message& message,Session* session)
+{
+    GroupService::instance().groupMemberList(message,session);
+});
+dispatcher.registerHandler(Messagetype::GroupJoinRequestList,[](const Message& message,Session* session)
+{
+    GroupService::instance().groupJoinRequestList(message,session);
+});
+  dispatcher.registerHandler(Messagetype::AcceptGroupJoinRequest,[](const Message& message,Session* session)
+{
+    GroupService::instance().acceptJoinRequest(message,session);
+});
+  dispatcher.registerHandler(Messagetype::RejectGroupJoinRequest,[](const Message& message,Session* session)
+{
+    GroupService::instance().rejectJoinRequest(message,session);
+});
+   dispatcher.registerHandler(Messagetype::SetGroupAdmin,[](const Message& message,Session* session)
+{
+    GroupService::instance().setGroupRole(message,session);
+});
+
+ dispatcher.registerHandler(Messagetype::RemoveGroupMember,[](const Message& message,Session* session)
+{
+    GroupService::instance().removeGroupMember(message,session);
+});
+
 }
 void GroupService::createGroup(const Message& msg,Session*se)
 {
@@ -67,14 +95,6 @@ void GroupService::createGroup(const Message& msg,Session*se)
     bool ok = model.create(group);
     if(!ok)
     return;
-
-    GroupMember member;
-    member.setGroupId(group.id());
-    member.setUserId(userId);
-    member.setRole(GroupRole::Owner);
-    member.setCreateTime(std::chrono::system_clock::now());
-     
-    ok=model.addGroupMember(member);
      
      Message reply;
 
@@ -132,19 +152,20 @@ void GroupService::joinGroup(const Message& msg,Session*se)
         return;
     }
 
-    GroupMember member;
-    member.setGroupId(groupId);
-    member.setUserId(userId);
-    member.setRole(GroupRole::Member);
-    member.setCreateTime(std::chrono::system_clock::now());
-
-    bool ok = model.addGroupMember(member);
-
-    reply.payload()["code"] = ok ? 0 : -1;
+    if(model.hasPendingJoinRequest(groupId, userId))
+   {
+    reply.payload()["code"] = -1;
     reply.payload()["groupId"] = groupId;
-    reply.payload()["message"] = ok ? "success" : "failed";
-
+    reply.payload()["message"] ="已经提交过入群申请";
     se->send(reply);
+    return;
+    }
+
+    bool ok =model.createJoinRequest(groupId, userId);
+    reply.payload()["code"] =ok ? 0 : -1;
+    reply.payload()["groupId"] =groupId;
+    reply.payload()["message"] =ok? "入群申请已发送" : "入群申请发送失败";
+     se->send(reply);
 }
 void GroupService::leaveGroup(const Message& msg, Session* se)
 {
@@ -276,15 +297,11 @@ void GroupService::groupChat(const Message& msg, Session* se)
 
     forward.payload()["groupId"] = groupId;
    forward.payload()["content"] = content;
-   forward.payload()["nickname"]=userSession->username();
+   forward.payload()["senderName"]=userSession->username();
    OfflineMessageModel offlineModel;
    for(const auto& member:members)
    {
     int userid=member.userId();
-    if(userid==userId)
-    {
-        continue;
-    }
 
     auto session=SessionManager::instance().getSession(userid);
     if(session)
@@ -349,6 +366,360 @@ void GroupService::groupList(const Message& msg,Session* se)
 
     list.push_back(item);
   }
+
+    se->send(reply);
+}
+void GroupService::groupJoinRequestList(const Message& msg,Session* se)
+{
+    if(!se || !se->authenticated())
+        return;
+    auto userSession =dynamic_cast<UserSession*>(se);
+    if(!userSession)
+        return;
+
+    int userId =userSession->userid();
+    const auto& payload = msg.payload();
+    if(!payload.contains("groupId"))
+        return;
+
+    int groupId = payload.at("groupId").get<int>();
+    GroupModel model;
+    Message reply;
+    reply.setType(Messagetype::GroupJoinRequestListResponse);
+    reply.setSequence(msg.sequence());
+    reply.setReceiverId(userId);
+
+    auto group =model.findById(groupId);
+
+    if(!group)
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] ="群不存在";
+        se->send(reply);
+        return;
+    }
+
+    // 在群里的角色
+    GroupRole role =model.getGroupMemberRole( groupId,userId);
+
+    if(role != GroupRole::Owner &&role != GroupRole::Admin)
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] ="没有权限查看入群申请";
+        se->send(reply);
+        return;
+    }
+
+    auto requests =model.findPendingJoinRequests(groupId);
+
+    reply.payload()["code"] = 0;
+    reply.payload()["groupId"] = groupId;
+    reply.payload()["requests"] = requests;
+
+    se->send(reply);
+}
+void GroupService::acceptJoinRequest(const Message& msg, Session* se)
+{
+    if(se == nullptr || !se->authenticated())
+        return;
+
+    auto userSession =dynamic_cast<UserSession*>(se);
+    if(userSession == nullptr)
+        return;
+
+    int actId =userSession->userid();
+    const auto& payload =msg.payload();
+    if(!payload.contains("requestId"))
+        return;
+    std::int64_t requestId = payload.at("requestId").get<std::int64_t>();
+    GroupModel model;
+
+    bool ok = model.acceptJoinRequest(requestId,  actId);
+    Message reply;
+    reply.setType( Messagetype::AcceptGroupJoinRequestResponse);
+
+    reply.setSequence(msg.sequence());
+    reply.setReceiverId(actId);
+
+    reply.payload()["code"] = ok ? 0 : -1;
+    reply.payload()["requestId"] =requestId;
+    reply.payload()["message"] =ok? "已接受入群申请":"接受入群申请失败";
+    se->send(reply);
+}
+void GroupService::rejectJoinRequest(const Message& msg,   Session* se)
+{
+    if(se == nullptr || !se->authenticated())
+        return;
+    auto userSession =dynamic_cast<UserSession*>(se);
+    if(userSession == nullptr)
+        return;
+    int operatorId =userSession->userid();
+
+    const auto& payload =msg.payload();
+    if(!payload.contains("requestId"))
+        return;
+    std::int64_t requestId =payload.at("requestId").get<std::int64_t>();
+
+    GroupModel model;
+    bool ok =model.rejectJoinRequest(requestId,operatorId);
+
+    Message reply;
+    reply.setType(Messagetype::RejectGroupJoinRequestResponse);
+    reply.setSequence(msg.sequence());
+    reply.setReceiverId(operatorId);
+    reply.payload()["code"] =ok ? 0 : -1;
+    reply.payload()["requestId"] =requestId;
+    reply.payload()["message"] =ok? "已拒绝入群申请": "拒绝入群申请失败";
+
+    se->send(reply);
+}
+void GroupService::setGroupRole(const Message& msg,Session* se)
+{
+    if(se == nullptr || !se->authenticated())
+        return;
+
+    auto userSession =dynamic_cast<UserSession*>(se);
+    if(userSession == nullptr)
+        return;
+    int operatorId =userSession->userid();
+
+    const auto& payload =msg.payload();
+
+    if(!payload.contains("groupId") ||!payload.contains("userId") ||!payload.contains("role"))
+    {
+        return;
+    }
+
+    std::int64_t groupId =payload.at("groupId").get<std::int64_t>();
+
+    int targetUserId =payload.at("userId").get<int>();
+    int roleValue =payload.at("role").get<int>();
+
+    Message reply;
+    reply.setType( Messagetype::SetGroupAdminResponse  );
+
+    reply.setSequence(msg.sequence());
+    reply.setReceiverId(operatorId);
+    if(roleValue !=static_cast<int>(GroupRole::Member) &&roleValue !=static_cast<int>(GroupRole::Admin))
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] = "非法角色";
+
+        se->send(reply);
+        return;
+    }
+
+    GroupModel model;
+    auto group =model.findById(groupId);
+
+    if(!group)
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] ="群不存在";
+
+        se->send(reply);
+        return;
+    }
+    GroupRole operatorRole = model.getGroupMemberRole(groupId,operatorId);
+
+    if(operatorRole != GroupRole::Owner)
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] ="只有群主可以设置管理员";
+        se->send(reply);
+        return;
+    }
+
+
+    if(targetUserId == operatorId)
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] =
+            "不能修改群主角色";
+
+        se->send(reply);
+        return;
+    }
+    if(!model.isGroupMember(groupId,targetUserId))
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] ="目标用户不是群成员";
+        se->send(reply);
+        return;
+    }
+
+    GroupRole tarRole =static_cast<GroupRole>(roleValue);
+
+    bool ok =model.setGroupMemberRole(groupId,targetUserId,tarRole);
+
+    reply.payload()["code"] =ok ? 0 : -1;
+    reply.payload()["groupId"] =  groupId;
+    reply.payload()["userId"] =
+        targetUserId;
+    reply.payload()["role"] =
+        roleValue;
+
+    reply.payload()["message"] =ok? (tarRole == GroupRole::Admin? "已设置为管理员": "已取消管理员"): "设置管理员失败";
+
+    se->send(reply);
+}
+void GroupService::groupMemberList(const Message& msg,Session* se)
+{
+    if(!se || !se->authenticated())
+        return;
+
+    auto userSession =dynamic_cast<UserSession*>(se);
+    if(!userSession)
+        return;
+
+    int userId = userSession->userid();
+    const auto& payload = msg.payload();
+    if(!payload.contains("groupId"))
+        return;
+    std::int64_t groupId =payload.at("groupId").get<std::int64_t>();
+
+    GroupModel model;
+    UserModel userModel;
+
+
+    Message reply;
+    reply.setType(Messagetype::GroupMemberListResponse);
+    reply.setSequence(msg.sequence());
+    reply.setReceiverId(userId);
+    if(!model.findById(groupId))
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] = "群不存在";
+
+        se->send(reply);
+        return;
+    }
+
+    if(!model.isGroupMember(groupId,userId))
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] = "不是群成员";
+
+        se->send(reply);
+        return;
+    }
+    auto members =model.findGroupMembers(groupId);
+    reply.payload()["code"] = 0;
+    reply.payload()["groupId"] = groupId;
+    auto& list =reply.payload()["members"];
+
+    for(const auto& member : members)
+    {
+         int memberUserId = member.userId();
+        nlohmann::json item;
+
+        item["userId"] = member.userId();
+        item["role"] =static_cast<int>(member.role());
+        auto user = userModel.findById(memberUserId);
+        if(user)
+        {
+            item["username"] = user->username();
+            item["nickname"] = user->nickname();
+        }
+        else
+        {
+            item["username"] = "";
+            item["nickname"] = "";
+        }
+        list.push_back(item);
+    }
+
+    se->send(reply);
+}
+void GroupService::removeGroupMember( const Message& msg, Session* se)
+{
+    if(!se || !se->authenticated())
+        return;
+
+    auto userSession =dynamic_cast<UserSession*>(se);
+    if(!userSession)
+        return;
+
+    int operatorId = userSession->userid();
+    const auto& payload = msg.payload();
+
+    if(!payload.contains("groupId") ||!payload.contains("userId"))
+    {
+        return;
+    }
+
+    std::int64_t groupId = payload.at("groupId").get<std::int64_t>();
+    int targetUserId =payload.at("userId").get<int>();
+    Message reply;
+    reply.setType(Messagetype::RemoveGroupMemberResponse);
+    reply.setSequence(msg.sequence());
+    reply.setReceiverId(operatorId);
+
+    GroupModel model;
+
+    auto group = model.findById(groupId);
+    if(!group)
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] = "群不存在";
+        se->send(reply);
+        return;
+    }
+
+    // 操作者必须是群成员
+    if(!model.isGroupMember(groupId, operatorId))
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] = "不是群成员";
+
+        se->send(reply);
+        return;
+    }
+
+    // 只有群主可以移除成员
+    GroupRole operatorRole =  model.getGroupMemberRole(groupId, operatorId);
+
+    if(operatorRole != GroupRole::Owner)
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] =
+            "只有群主可以移除成员";
+
+        se->send(reply);
+        return;
+    }
+
+    // 不能移除自己
+    if(targetUserId == operatorId)
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] =
+            "群主不能移除自己";
+
+        se->send(reply);
+        return;
+    }
+
+    // 目标必须是群成员
+    if(!model.isGroupMember(groupId, targetUserId))
+    {
+        reply.payload()["code"] = -1;
+        reply.payload()["message"] =
+            "目标用户不是群成员";
+
+        se->send(reply);
+        return;
+    }
+
+    // 正常情况下群主不能被移除，这里已经排除了自己，
+    // 目标不可能是另一个群主，因此直接删除即可。
+    bool ok =model.removeGroupMember(groupId, targetUserId);
+
+    reply.payload()["code"] = ok ? 0 : -1;
+    reply.payload()["groupId"] = groupId;
+    reply.payload()["userId"] = targetUserId;
+    reply.payload()["message"] =
+        ok ? "已移除群成员" : "移除群成员失败";
 
     se->send(reply);
 }

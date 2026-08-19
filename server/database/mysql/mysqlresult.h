@@ -15,8 +15,6 @@ public:
     MysqlResult& operator=(const MysqlResult&) = delete;
     MysqlResult(MysqlResult&&) noexcept;
     MysqlResult& operator=(MysqlResult&&) noexcept;
-
-    // 获取下一行
     bool fetch();
     // 行数
     size_t rowCount() const;

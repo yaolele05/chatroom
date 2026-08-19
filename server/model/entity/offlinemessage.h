@@ -54,11 +54,20 @@ class OfflineMessage
     {
         type_=type;
     }
+  bool delivered() const
+    {
+        return delivered_;
+    }
 
+    void setDelivered(bool value)
+    {
+        delivered_ = value;
+    }
     private:
     std::int64_t id_;
     int userId_;
     std::int64_t messageId_;
     std::chrono::system_clock::time_point createTime_;
      OfflineType type_;
+      bool delivered_;
 };

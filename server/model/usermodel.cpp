@@ -13,9 +13,7 @@ User UserModel::makeUser(const MysqlResult& result)
     user.setNickname(result.get<std::string>(4));
     user.setAvatar(result.get<std::string>(5));
     user.setSignature(result.get<std::string>(6));
-  /*  user.setCreateTime(result.get<std::chrono::system_clock::time_point>(7));
-    user.setUpdateTime(result.get<std::chrono::system_clock::time_point>(8));
-   */
+ 
     return user;
 }
 bool UserModel::insert( User& user)
@@ -60,7 +58,7 @@ bool UserModel::update(const User& user)
    }
    
    auto stmt=conn->prepare(R"(UPDATE users SET
-    nickname=?,avatar=?,signature=?,password_hash=?WHERE id=?)");
+    nickname=?, avatar=?, signature=?, password_hash=? WHERE id=?)");
 
     if(!stmt)
     {
@@ -73,7 +71,9 @@ bool UserModel::update(const User& user)
     stmt->bind(3,user.passwordHash());
     stmt->bind(4,user.id());
    
-    return stmt->execute();
+     bool ok=stmt->execute();
+    MysqlPool::instance().releaseConnection(conn);
+    return ok;
 }
 bool UserModel::remove(int userid)
 {
@@ -86,12 +86,14 @@ bool UserModel::remove(int userid)
 
     if(!stmt)
     {
-         MysqlPool::instance().getConnection();
+         MysqlPool::instance().releaseConnection(conn);
     return false;
     }
     stmt->bind(0,userid);
 
-    return stmt->execute();
+    bool ok=stmt->execute();
+    MysqlPool::instance().releaseConnection(conn);
+    return ok;
 
 }
 std::optional<User> UserModel::findById(int userid)
@@ -104,7 +106,7 @@ std::optional<User> UserModel::findById(int userid)
    "id,"
    "username,"
    "password_hash,"
-   "email"
+   "email,"
    "nickname,"
    "avatar,"
    "signature "
@@ -152,7 +154,7 @@ std::optional<User> UserModel::findByName(const std::string& username)
         "id,"
         "username,"
          "password_hash,"
-         "email"
+         "email,"
           "nickname,"
            "avatar,"
            "signature " 
@@ -168,9 +170,7 @@ std::optional<User> UserModel::findByName(const std::string& username)
     std::cout<<"prepare ok"<<std::endl;
     stmt->bind(0,username);
      
-    std::cout<<"bind ok username="
-             <<username
-             <<std::endl;
+    std::cout<<"bind ok username=" <<username<<std::endl;
     auto result=stmt->query();
         std::cout<<"query returned"<<std::endl;
    
@@ -178,12 +178,7 @@ std::optional<User> UserModel::findByName(const std::string& username)
     {
          std::cout<<"fetch success"<<std::endl;
         auto user=makeUser(result);
-
-        std::cout<<"find user id="
-             <<user.id()
-             <<" name="
-             <<user.username()
-             <<std::endl;
+        std::cout<<"find user id="<<user.id()<<" name="<<user.username()<<std::endl;
         MysqlPool::instance().releaseConnection(conn);
         return user;
     }
@@ -203,7 +198,7 @@ std::vector<User> UserModel::findAll()
         "id,"
         "username,"
          "password_hash,"
-         "email"
+         "email,"
           "nickname,"
            "avatar,"
            "signature " 
@@ -239,7 +234,7 @@ std::vector<User> UserModel::findAll()
         return std::nullopt;
     }
 
-    auto stmt = conn->prepare(  "SELECT " "id,"  "username," "password_hash,"  "email,""nickname," "avatar,"   "signature "
+    auto stmt = conn->prepare(  "SELECT " "id,"  "username," "password_hash,"  "email," "nickname," "avatar,"   "signature "
         "FROM users "
         "WHERE email=?"
     );
@@ -284,4 +279,187 @@ bool UserModel::updatePassword(int userid,const std::string& passwordHash)
     MysqlPool::instance().releaseConnection(conn);
 
     return ok;
+}
+bool UserModel::deleteAccount(int userid)
+{
+    auto conn = MysqlPool::instance().getConnection();
+
+    if(!conn)
+    {
+        std::cerr << "[UserModel] get mysql connection failed\n";
+        return false;
+    }
+    if(!conn->beginTransaction())
+    {
+        std::cerr << "[UserModel] begin transaction failed: "<< conn->error() << std::endl;
+        MysqlPool::instance().releaseConnection(conn);
+        return false;
+    }
+
+    auto rollback = [&]()
+    {
+        conn->rollback();
+        MysqlPool::instance().releaseConnection(conn);
+    };
+
+    {
+        auto stmt = conn->prepare("DELETE FROM offline_message "   "WHERE user_id=?");
+        if(!stmt)
+        {
+            rollback();
+            return false;
+        }
+        stmt->bind(0, userid);
+        if(!stmt->execute())
+        {
+            rollback();
+            return false;
+        }
+    }
+
+    {
+        auto stmt = conn->prepare( "DELETE FROM message "  "WHERE sender_id=? OR receiver_id=?");
+        if(!stmt)
+        {
+            rollback();
+            return false;
+        }
+
+        stmt->bind(0, userid);
+        stmt->bind(1, userid);
+
+        if(!stmt->execute())
+        {
+            rollback();
+            return false;
+        }
+    }
+
+
+    {
+        auto stmt = conn->prepare( "DELETE FROM file_receiver "  "WHERE user_id=?");
+
+        if(!stmt)
+        {
+            rollback();
+            return false;
+        }
+        stmt->bind(0, userid);
+        if(!stmt->execute())
+        {
+            rollback();
+            return false;
+        }
+    }
+
+    {
+        auto stmt = conn->prepare( "DELETE FROM file " "WHERE sender_id=? OR receiver_id=?");
+        if(!stmt)
+        {
+            rollback();
+            return false;
+        }
+
+        stmt->bind(0, userid);
+        stmt->bind(1, userid);
+
+        if(!stmt->execute())
+        {
+            rollback();
+            return false;
+        }
+    }
+
+    {
+        auto stmt = conn->prepare( "DELETE FROM friend_request " "WHERE from_user_id=? OR to_user_id=?");
+        if(!stmt)
+        {
+            rollback();
+            return false;
+        }
+
+        stmt->bind(0, userid);
+        stmt->bind(1, userid);
+
+        if(!stmt->execute())
+        {
+            rollback();
+            return false;
+        }
+    }
+
+    {
+        auto stmt = conn->prepare(  "DELETE FROM user_friend " "WHERE user_id=? OR friend_id=?");
+        if(!stmt)
+        {
+            rollback();
+            return false;
+        }
+
+        stmt->bind(0, userid);
+        stmt->bind(1, userid);
+        if(!stmt->execute())
+        {
+            rollback();
+            return false;
+        }
+    }
+
+    {
+        auto stmt = conn->prepare(  "DELETE FROM group_join_request "   "WHERE  from_user_id=?");
+        if(!stmt)
+        {
+            rollback();
+            return false;
+        }
+        stmt->bind(0, userid);
+        if(!stmt->execute())
+        {
+            rollback();
+            return false;
+        }
+    }
+
+    {
+        auto stmt = conn->prepare(  "DELETE FROM chatgroup_member "  "WHERE user_id=?");
+        if(!stmt)
+        {
+            rollback();
+            return false;
+        }
+        stmt->bind(0, userid);
+        if(!stmt->execute())
+        {
+            rollback();
+            return false;
+        }
+    }
+
+    {
+        auto stmt = conn->prepare( "DELETE FROM users "  "WHERE id=?");
+        if(!stmt)
+        {
+            rollback();
+            return false;
+        }
+        stmt->bind(0, userid);
+        if(!stmt->execute())
+        {
+            rollback();
+            return false;
+        }
+    }
+
+    if(!conn->commit())
+    {
+        std::cerr << "[UserModel] commit failed: "<< conn->error() << std::endl;
+
+        conn->rollback();
+        MysqlPool::instance().releaseConnection(conn);
+        return false;
+    }
+    MysqlPool::instance().releaseConnection(conn);
+    std::cout << "[UserModel] delete account success, userid=" << userid << std::endl;
+
+    return true;
 }

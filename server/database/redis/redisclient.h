@@ -53,6 +53,11 @@ public:
     bool publish(const std::string& channel,const std::string& message);
 
     bool refreshHeartbeat(int userid);
+
+    bool blockFriend(uint32_t userId,uint32_t friendId);
+     bool unblockFriend(uint32_t userId,uint32_t friendId);
+     bool isBlocked(uint32_t userId,uint32_t friendId);
+
 private:
 
     redisContext* context_{nullptr};

@@ -9,7 +9,7 @@
 #include <nlohmann/json.hpp>
 #include "../businessdispatcher/businessdispatcher.h"
 #include <chrono>
-
+#include "friendservice.h"
 using json=nlohmann::json;
 ChatService& ChatService::instance()
 {
@@ -159,30 +159,36 @@ void ChatService::handlePrivateUnreadRequest(const Message& msg,const std::share
      if(peerId == 0)
         return;
 
-    std::cout
+  
+    Message checkMsg=msg;
+    checkMsg.payload()["peerId"]=peerId;
+    if(FriendService::instance().isFriendBlocked(checkMsg,session.get()))
+    {
+          std::cout
         << "[PrivateUnreadRequest]"
         << " userId=" << userId
         << " peerId=" << peerId
         << std::endl;
 
+        Message response;
+        response.setType(Messagetype::PrivateChatResponse);
+        response.setSenderId(userId);
+        response.payload()["code"]=-1;
+        response.payload()["block"]=true;
+        response.payload()["message"]="存在屏蔽关系，无法聊天";
+        session->send(response);
 
-    // 1. 从 offline_message 找到这个好友对应的未读消息
+        return;
+
+    }
+
+    
     OfflineMessageModel offlineModel;
 
-    auto offlineMessages =
-        offlineModel.findPrivateMessages(
-            userId,
-            peerId
-        );
+    auto offlineMessages =offlineModel.findPrivateMessages(userId,peerId);
 
-    std::cout
-        << "[PrivateUnreadRequest]"
-        << " unread count="
-        << offlineMessages.size()
-        << std::endl;
-
-
-    // 2. 根据 message_id 去 message 表读取正文
+    std::cout<< "[PrivateUnreadRequest]" << " unread count="<< offlineMessages.size()<< std::endl;
+  
     MessageModel messageModel;
 
     for(const auto& offline : offlineMessages)

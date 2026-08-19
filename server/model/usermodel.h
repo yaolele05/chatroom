@@ -17,7 +17,7 @@ class UserModel
     std::vector<User> findAll();
     std::optional<User> findByEmail(const std::string& email);
     bool updatePassword(int32_t userId,const std::string& passwordHash);
-     
+    bool deleteAccount(int userid); 
   private:
 
     User makeUser(const MysqlResult& result);

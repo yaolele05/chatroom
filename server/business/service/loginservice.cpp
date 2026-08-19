@@ -11,6 +11,7 @@
 #include <iostream>
 #include "../../session/sessionmanager.h"
 #include <random>
+#include "../../database/connectionpool/mysqlpool.h"
 LoginService& LoginService::instance()
 {
     static LoginService instance;
@@ -51,6 +52,11 @@ void LoginService::registerHandle()
  dispatcher.registerHandler(Messagetype::ResetPassword,[](const Message& message, Session* session)
 {
     LoginService::instance().resetPassword(message, session);
+});
+
+ dispatcher.registerHandler(Messagetype::DeleteAccount,[](const Message& message, Session* session)
+{
+    LoginService::instance().deleteAccount(message, session);
 });
 }
 void LoginService::registerUser(const Message& msg,Session* se)
@@ -201,6 +207,7 @@ void LoginService::registerUser(const Message& msg,Session* se)
     if(!ok)
         reply.payload()["reason"] = "register failed";
 
+      
     se->send(reply);
 
 }
@@ -715,10 +722,7 @@ void LoginService::resetPassword(const Message& msg,Session* se)
         se->send(reply);
         return;
     }
-
- 
     user->setPasswordHash(Sha256::data(newPassword));
-
     user->setUpdateTime( std::chrono::system_clock::now());
     bool ok = model.update(*user);
     if(!ok)
@@ -731,6 +735,79 @@ void LoginService::resetPassword(const Message& msg,Session* se)
     }
     reply.payload()["success"] = true;
     reply.payload()["reason"] = "密码修改成功";
+
+    se->send(reply);
+}
+void LoginService::deleteAccount(const Message& msg,Session* se)
+{
+    if(se == nullptr)
+        return;
+
+    if(!se->authenticated())
+    {
+        Message reply;
+
+        reply.setType(Messagetype::DeleteAccountResponse);
+        reply.setSequence(msg.sequence());
+        reply.payload()["success"] = false;
+        reply.payload()["reason"] = "not logged in";
+
+        se->send(reply);
+        return;
+    }
+
+    auto userSession =dynamic_cast<UserSession*>(se);
+    if(userSession == nullptr)
+    {
+        Message reply;
+
+        reply.setType(Messagetype::DeleteAccountResponse);
+        reply.setSequence(msg.sequence());
+        reply.payload()["success"] = false;
+        reply.payload()["reason"] = "invalid user session";
+
+        se->send(reply);
+        return;
+    }
+
+    int userId = userSession->userid();
+
+    std::cout<< "[DeleteAccount] userid="<< userId<< std::endl;
+    UserModel model;
+    bool ok = model.deleteAccount(userId);
+    Message reply;
+    reply.setType(Messagetype::DeleteAccountResponse);
+    reply.setSequence(msg.sequence());
+    reply.setReceiverId(userId);
+
+    if(!ok)
+    {
+        reply.payload()["success"] = false;
+        reply.payload()["reason"] = "delete account failed";
+
+        se->send(reply);
+
+        return;
+    }
+
+    auto redis =RedisPool::instance().getConnection();
+    if(redis)
+    {
+        if(!redis->setUserOffline(userId))
+        {
+            std::cout<< "[DeleteAccount] "<< "redis set offline failed"<< std::endl;
+        }
+
+        RedisPool::instance().releaseConnection(redis);
+    }
+
+    userSession->setAuthenticated(false);
+    SessionManager::instance().unbindUser(userSession);
+
+    std::cout<< "[DeleteAccount] "<< "unbind user "<< userId  << std::endl;
+
+    reply.payload()["success"] = true;
+    reply.payload()["message"] = "account deleted";
 
     se->send(reply);
 }

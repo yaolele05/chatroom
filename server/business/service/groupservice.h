@@ -13,6 +13,14 @@ class GroupService
     void leaveGroup(const Message& msg,Session* se);
     void groupChat(const Message& msg,Session* se);
     void groupList(const Message& msg,  Session*se);
+
+    void groupJoinRequestList(const Message& msg,Session* se);
+    void acceptJoinRequest(const Message& msg,Session* se);
+     void rejectJoinRequest(const Message& msg,Session* se);
+
+     void setGroupRole(const Message& msg,Session* se);
+    void groupMemberList(const Message& msg,Session* se);
+    void removeGroupMember(const Message& msg, Session* se);
     private:
     GroupService()=default;
 };

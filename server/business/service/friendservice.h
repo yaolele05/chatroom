@@ -11,6 +11,8 @@ class FriendService
     void FriendList(const Message& msg,Session* s);
     bool blockFriend(const Message& msg,Session* s);
     bool unblockFriend(const Message& msg,Session* s);
-    bool isFriendBlocked(const Message& msg,Session* s);
-
+    bool isFriendBlocked(const Message& msg, Session* se);
+    void acceptFriend(const Message& msg,Session* se);
+    void rejectFriend(const Message& msg,Session* se);
+     void friendRequestList(const Message& msg,Session* se);
 };

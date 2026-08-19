@@ -25,7 +25,7 @@ class LoginService
     void sendLoginCode(const Message& msg,Session* se);
     void sendResetCode(const Message& msg,Session* se);
      void resetPassword(const Message& msg,Session* se);
-
+    void deleteAccount(const Message& message, Session* session);
 
     private:
 

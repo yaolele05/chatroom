@@ -107,6 +107,8 @@ std::optional<std::string> RedisClient::get(const std::string& key)
 bool RedisClient::del(const std::string& key)
 {
 
+    if(!connected())
+        return false;
     redisReply* reply=static_cast<redisReply*>(redisCommand(context_,"DEL %s",key.c_str()));
 
     if(reply==nullptr)
@@ -233,4 +235,20 @@ bool RedisClient::unsubscribe(const std::string& channel)
     RedisResult result=command("UNSUBSCRIBE: %s",channel.c_str());
     
     return result.valid();
+}
+bool RedisClient::blockFriend(uint32_t userId,uint32_t friendId)
+{
+     
+   bool re= set("block:"+std::to_string(userId)+":"+std::to_string(friendId),"1");
+   return re;
+}
+bool RedisClient::unblockFriend(uint32_t userId,uint32_t friendId)
+{
+    bool re=del("block:"+std::to_string(userId)+":"+std::to_string(friendId));
+    return re;
+}
+bool RedisClient::isBlocked(uint32_t userId,uint32_t friendId)
+{
+    bool re=exists("block:"+std::to_string(userId)+":"+std::to_string(friendId));
+    return re;
 }
