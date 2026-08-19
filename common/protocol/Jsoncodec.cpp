@@ -58,7 +58,47 @@ std::string JsonCodec::TypeToString(Messagetype type)
     case Messagetype::HistoryResponse:return "history_response";
     case Messagetype::OfflineFileNotify:return "offlinefile_notify";
     case Messagetype::FileDownloadRequest:return "filedownload_request";
-  
+    case Messagetype::SendRegisterCode:return "sendregister_code";
+    case Messagetype::SendRegisterCodeResponse:return "sendregistercode_response";
+    case Messagetype::SendLoginCode:return "sendlogin_code";
+    case Messagetype::SendLoginCodeResponse:return "sendlogincode_response";
+    case Messagetype::SendResetCode:return "sendreset_code";
+    case Messagetype::SendResetCodeResponse:return "sendresetcode_response";
+    case Messagetype::LoginByCode:return "loginbycode";
+    case Messagetype::LoginByCodeResponse:return "loginbycode_response";
+    case Messagetype::ResetPassword:return "reset_password";
+    case Messagetype::ResetPasswordResponse:return "resetpassword_response";
+    case Messagetype::PrivateChatRead:return "privatechat_read";
+    case Messagetype::PrivateUnreadRequest:return "privateunread_request";
+    case Messagetype::BlockFriend:return "block_friend";
+    case Messagetype::BlockFriendResponse:return "blockfriend_response";
+    case Messagetype::UnblockFriend:return "unblock_friend";
+    case Messagetype::UnblockFriendResponse:return "unblockfriend_response";
+    case Messagetype::AcceptFriend:return "accept_friend";
+    case Messagetype::AcceptFriendResponse:return "acceptfriend_response";
+    case Messagetype::RejectFriend:return "reject_friend";
+    case Messagetype::RejectFriendResponse:return "rejectfriend_response";
+    case Messagetype::FriendRequestList:return "friendrequest_list";
+    case Messagetype::FriendRequestListResponse:return "friendrequestlist_response";
+   
+    case Messagetype::GroupJoinRequestList:
+    return "groupjoinrequest_list";
+    case Messagetype::GroupJoinRequestListResponse: return "groupjoinrequest_list_response";
+    case Messagetype::AcceptGroupJoinRequest: return "acceptgroupjoin_request";
+    case Messagetype::AcceptGroupJoinRequestResponse:return "acceptgroupjoin_request_response";
+    case Messagetype::RejectGroupJoinRequest:return "rejectgroupjoin_request";
+    case Messagetype::RejectGroupJoinRequestResponse: return "rejectgroupjoinrequest_response";
+    case Messagetype::SetGroupAdmin:return "setgroup_admin";
+    case Messagetype::SetGroupAdminResponse: return "setgroupadmin_response";
+    case Messagetype::GroupMemberList:return "groupmember_list";
+    case Messagetype::GroupMemberListResponse: return "groupmemberlist_response";
+    case Messagetype::RemoveGroupMember:return "removegroup_member";
+    case Messagetype::RemoveGroupMemberResponse:return "removegroupmember_response";
+    case Messagetype::DeleteAccount:
+    return "delete_account";
+
+case Messagetype::DeleteAccountResponse:
+    return "delete_account_response";
     default: return"unknown";
     }
 }
@@ -163,6 +203,81 @@ Messagetype JsonCodec::StringToType(const std::string& type)
       if(type=="filedownload_request")
       return Messagetype::FileDownloadRequest;
 
+        if(type=="sendregister_code")
+      return Messagetype::SendRegisterCode;
+       if(type=="sendregistercode_response")
+      return Messagetype::SendRegisterCodeResponse;
+       if(type=="sendlogin_code")
+      return Messagetype::SendLoginCode;
+       if(type=="sendlogincode_response")
+      return Messagetype::SendLoginCodeResponse;
+         if(type=="sendreset_code")
+      return Messagetype::SendResetCode;
+         if(type=="sendresetcode_response")
+      return Messagetype::SendResetCodeResponse;
+         if(type=="loginbycode")
+      return Messagetype::LoginByCode;
+         if(type=="loginbycode_response")
+      return Messagetype::LoginByCodeResponse;
+         if(type=="reset_password")
+      return Messagetype::ResetPassword;
+       if(type=="resetpassword_response")
+      return Messagetype::ResetPasswordResponse;
+       if(type=="privatechat_read")
+       return Messagetype::PrivateChatRead;
+        if(type=="privateunread_request")
+        return Messagetype::PrivateUnreadRequest;
+        if(type=="block_friend")
+        return Messagetype::BlockFriend;
+        if(type=="blockfriend_response")
+        return Messagetype::BlockFriendResponse;
+        if(type=="unblock_friend")
+        return Messagetype::UnblockFriend;
+        if(type=="unblockfriend_response")
+        return Messagetype::UnblockFriendResponse;
+
+        if(type=="accept_friend")
+        return Messagetype::AcceptFriend;
+        if(type=="acceptfriend_response")
+        return Messagetype::AcceptFriendResponse;
+        if(type=="reject_friend")
+        return Messagetype::RejectFriend;
+        if(type=="rejectfriend_response")
+        return Messagetype::RejectFriendResponse;
+        if(type=="friendrequest_list")
+        return Messagetype::FriendRequestList;
+        if(type=="friendrequestlist_response")
+        return Messagetype::FriendRequestListResponse;
+        
+       if(type == "groupjoinrequest_list")
+       return Messagetype::GroupJoinRequestList;
+    if(type == "groupjoinrequest_list_response")
+    return Messagetype::GroupJoinRequestListResponse;
+    if(type == "acceptgroupjoin_request")
+    return Messagetype::AcceptGroupJoinRequest;
+    if(type == "acceptgroupjoin_request_response")
+    return Messagetype::AcceptGroupJoinRequestResponse;
+    if(type == "rejectjoin_request")
+    return Messagetype::RejectGroupJoinRequest;
+    if(type == "rejectgroupjoinrequest_response")
+    return Messagetype::RejectGroupJoinRequestResponse;
+     if(type == "setgroup_admin")
+    return Messagetype::SetGroupAdmin;
+     if(type == "setgroupadmin_response")
+    return Messagetype::SetGroupAdminResponse;
+    if(type == "groupmember_list")
+    return Messagetype::GroupMemberList;
+      if(type == "groupmemberlist_response")
+    return Messagetype::GroupMemberListResponse;
+     if(type == "removegroup_member")
+    return Messagetype::RemoveGroupMember;
+    if(type == "removegroupmember_response")
+    return Messagetype::RemoveGroupMemberResponse;
+    if(type == "delete_account")
+    return Messagetype::DeleteAccount;
+   if(type == "delete_account_response")
+    return Messagetype::DeleteAccountResponse;
+
     return Messagetype::unknown;
 }
 std::string JsonCodec::encode(const Message& message)
@@ -248,14 +363,44 @@ void JsonCodec::dataMessage(nlohmann::json& j,Messagetype type)
     {
         case Messagetype::Login:
         {
-            if(!j["payload"].contains("username"))
-            {
-                throw std::runtime_error("login no username");
+        auto& payload = j["payload"];
+
+        if(!payload.contains("loginType"))
+        {
+        throw std::runtime_error("login no loginType");
+            
+        }
+        std::string loginType =payload["loginType"].get<std::string>();
+
+        if(loginType == "password")
+        {
+          if(!payload.contains("username"))
+           {
+              throw std::runtime_error("login no username");
             }
-             if(!j["payload"].contains("password"))
-             {
-               throw std::runtime_error("login no password"); 
-             }
+
+            if(!payload.contains("password"))
+            {
+             throw std::runtime_error("login no password");
+            }
+        }
+        else if(loginType == "code")
+        {
+            if(!payload.contains("email"))
+            {
+            throw std::runtime_error("login no email");
+            }
+
+            if(!payload.contains("code"))
+            {
+                throw std::runtime_error("login no code");
+            }
+        }
+        else
+        {
+            throw std::runtime_error("unknown loginType");
+        }
+
             break;
         };
         case Messagetype::PrivateChat:
@@ -273,17 +418,12 @@ void JsonCodec::dataMessage(nlohmann::json& j,Messagetype type)
 }
 Message JsonCodec::buildMessage(nlohmann::json& j,Messagetype type)
 {
-  Message msg;
-  msg.setType(type);
-
+    Message msg;
+    msg.setType(type);
     msg.setSequence( j["sequence"].get<uint64_t>());
-
     msg.setSenderId( j["senderId"].get<uint64_t>());//
-
     msg.setReceiverId(j["receiverId"].get<uint64_t>());//
-
     msg.setTimestamp( j["timestamp"].get<uint64_t>());
-
     msg.setPayload(j["payload"]);
 
     return msg;
@@ -291,14 +431,9 @@ Message JsonCodec::buildMessage(nlohmann::json& j,Messagetype type)
 Message JsonCodec::decode(const std::string& data)
 {
     json j = parseJson(data);
-
     dataRequireFields( j);
-
     dataFieldTypes( j);
-
     Messagetype type = parseMessageType( j);
-
     dataMessage(j, type);
-
     return buildMessage(j, type);
 }

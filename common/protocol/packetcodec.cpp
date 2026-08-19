@@ -14,9 +14,7 @@ std::string PacketCodec::encode(const std::string& json)
     std::string packet;
     packet.append(reinterpret_cast<const char*>(&header),sizeof(header));
     packet.append(json);
-    std::cout<<"encode header size="
-         <<sizeof(PacketHeader)
-         <<std::endl;
+    //std::cout<<"encode header size=" <<sizeof(PacketHeader) <<std::endl;
     return packet;
 
 }
@@ -53,8 +51,6 @@ PacketCodec::DecodeResult PacketCodec::decode(Buffer& buffer,std::string& json)
     json.assign(buffer.peek()+kHeaderSize,header.length);
     buffer.retrieve(kHeaderSize+header.length);
 
-    std::cout<<"decode header size="
-         <<sizeof(PacketHeader)
-         <<std::endl;
+    //std::cout<<"decode header size=" <<sizeof(PacketHeader)  <<std::endl;
     return DecodeResult::Ok;
 }

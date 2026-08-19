@@ -70,5 +70,57 @@ enum class Messagetype : uint16_t
     HistoryRequest,
     HistoryResponse,
     OfflineFileNotify,
-    FileDownloadRequest
+    FileDownloadRequest,
+
+    SendRegisterCode,
+    SendRegisterCodeResponse,
+
+    SendLoginCode,
+    SendLoginCodeResponse,
+
+    SendResetCode,
+    SendResetCodeResponse,
+
+   LoginByCode,
+   LoginByCodeResponse,
+
+   ResetPassword,
+   ResetPasswordResponse,
+
+   PrivateChatRead,
+   PrivateUnreadRequest,
+
+   BlockFriend,
+   BlockFriendResponse,
+   UnblockFriend,
+   UnblockFriendResponse,
+
+   AcceptFriend,
+   AcceptFriendResponse,
+
+   RejectFriend,
+  RejectFriendResponse,
+
+  FriendRequestList,
+  FriendRequestListResponse,
+
+  GroupJoinRequestList,
+  GroupJoinRequestListResponse,
+  AcceptGroupJoinRequest,
+  AcceptGroupJoinRequestResponse,
+  RejectGroupJoinRequest,
+  RejectGroupJoinRequestResponse,
+  SetGroupAdmin,
+   SetGroupAdminResponse,
+
+   GroupMemberList,
+  GroupMemberListResponse,
+    RemoveGroupMember,
+    RemoveGroupMemberResponse,
+
+    DeleteAccount,
+    DeleteAccountResponse
+    
+
+
 };

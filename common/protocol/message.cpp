@@ -1,13 +1,13 @@
 #include "message.h"
 
-Message::Message()
+Message::Message(): type_(Messagetype::unknown),sequence_(0),senderId_(0), receiverId_(0), timestamp_(0),payload_(nlohmann::json::object())
 {
-
 }
-Message::Message(Messagetype type):type_(type)
+
+Message::Message(Messagetype type): type_(type),sequence_(0),senderId_(0),receiverId_(0),timestamp_(0),  payload_(nlohmann::json::object())
 {
-
 }
+
 void Message::setType(Messagetype type)
 {
     type_=type;
