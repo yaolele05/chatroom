@@ -1,0 +1,326 @@
+[
+{
+  "directory": "/home/yaolele/chatroom/build/common",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/common.dir/buffer.cpp.o -c /home/yaolele/chatroom/common/buffer.cpp",
+  "file": "/home/yaolele/chatroom/common/buffer.cpp",
+  "output": "common/CMakeFiles/common.dir/buffer.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/common",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/common.dir/protocol/Jsoncodec.cpp.o -c /home/yaolele/chatroom/common/protocol/Jsoncodec.cpp",
+  "file": "/home/yaolele/chatroom/common/protocol/Jsoncodec.cpp",
+  "output": "common/CMakeFiles/common.dir/protocol/Jsoncodec.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/common",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/common.dir/protocol/message.cpp.o -c /home/yaolele/chatroom/common/protocol/message.cpp",
+  "file": "/home/yaolele/chatroom/common/protocol/message.cpp",
+  "output": "common/CMakeFiles/common.dir/protocol/message.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/common",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/common.dir/protocol/packetcodec.cpp.o -c /home/yaolele/chatroom/common/protocol/packetcodec.cpp",
+  "file": "/home/yaolele/chatroom/common/protocol/packetcodec.cpp",
+  "output": "common/CMakeFiles/common.dir/protocol/packetcodec.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/common",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/common.dir/protocol/protocol.cpp.o -c /home/yaolele/chatroom/common/protocol/protocol.cpp",
+  "file": "/home/yaolele/chatroom/common/protocol/protocol.cpp",
+  "output": "common/CMakeFiles/common.dir/protocol/protocol.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/common",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/common.dir/security/auth/token.cpp.o -c /home/yaolele/chatroom/common/security/auth/token.cpp",
+  "file": "/home/yaolele/chatroom/common/security/auth/token.cpp",
+  "output": "common/CMakeFiles/common.dir/security/auth/token.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/common",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/common.dir/security/crypto/base64.cpp.o -c /home/yaolele/chatroom/common/security/crypto/base64.cpp",
+  "file": "/home/yaolele/chatroom/common/security/crypto/base64.cpp",
+  "output": "common/CMakeFiles/common.dir/security/crypto/base64.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/common",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/common.dir/security/crypto/sha256.cpp.o -c /home/yaolele/chatroom/common/security/crypto/sha256.cpp",
+  "file": "/home/yaolele/chatroom/common/security/crypto/sha256.cpp",
+  "output": "common/CMakeFiles/common.dir/security/crypto/sha256.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/common",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/common.dir/security/ssl/sslcontext.cpp.o -c /home/yaolele/chatroom/common/security/ssl/sslcontext.cpp",
+  "file": "/home/yaolele/chatroom/common/security/ssl/sslcontext.cpp",
+  "output": "common/CMakeFiles/common.dir/security/ssl/sslcontext.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/common",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/common.dir/security/ssl/sslmanager.cpp.o -c /home/yaolele/chatroom/common/security/ssl/sslmanager.cpp",
+  "file": "/home/yaolele/chatroom/common/security/ssl/sslmanager.cpp",
+  "output": "common/CMakeFiles/common.dir/security/ssl/sslmanager.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/minimuduo",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/minimuduo.dir/net/EventLoopThread.cpp.o -c /home/yaolele/chatroom/minimuduo/net/EventLoopThread.cpp",
+  "file": "/home/yaolele/chatroom/minimuduo/net/EventLoopThread.cpp",
+  "output": "minimuduo/CMakeFiles/minimuduo.dir/net/EventLoopThread.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/minimuduo",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/minimuduo.dir/net/EventLoopThreadPool.cpp.o -c /home/yaolele/chatroom/minimuduo/net/EventLoopThreadPool.cpp",
+  "file": "/home/yaolele/chatroom/minimuduo/net/EventLoopThreadPool.cpp",
+  "output": "minimuduo/CMakeFiles/minimuduo.dir/net/EventLoopThreadPool.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/minimuduo",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/minimuduo.dir/net/TcpServer.cpp.o -c /home/yaolele/chatroom/minimuduo/net/TcpServer.cpp",
+  "file": "/home/yaolele/chatroom/minimuduo/net/TcpServer.cpp",
+  "output": "minimuduo/CMakeFiles/minimuduo.dir/net/TcpServer.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/minimuduo",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/minimuduo.dir/net/Tcpconnection.cpp.o -c /home/yaolele/chatroom/minimuduo/net/Tcpconnection.cpp",
+  "file": "/home/yaolele/chatroom/minimuduo/net/Tcpconnection.cpp",
+  "output": "minimuduo/CMakeFiles/minimuduo.dir/net/Tcpconnection.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/minimuduo",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/minimuduo.dir/net/acceptor.cpp.o -c /home/yaolele/chatroom/minimuduo/net/acceptor.cpp",
+  "file": "/home/yaolele/chatroom/minimuduo/net/acceptor.cpp",
+  "output": "minimuduo/CMakeFiles/minimuduo.dir/net/acceptor.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/minimuduo",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/minimuduo.dir/net/channel.cpp.o -c /home/yaolele/chatroom/minimuduo/net/channel.cpp",
+  "file": "/home/yaolele/chatroom/minimuduo/net/channel.cpp",
+  "output": "minimuduo/CMakeFiles/minimuduo.dir/net/channel.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/minimuduo",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/minimuduo.dir/net/epollpoller.cpp.o -c /home/yaolele/chatroom/minimuduo/net/epollpoller.cpp",
+  "file": "/home/yaolele/chatroom/minimuduo/net/epollpoller.cpp",
+  "output": "minimuduo/CMakeFiles/minimuduo.dir/net/epollpoller.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/minimuduo",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/minimuduo.dir/net/eventloop.cpp.o -c /home/yaolele/chatroom/minimuduo/net/eventloop.cpp",
+  "file": "/home/yaolele/chatroom/minimuduo/net/eventloop.cpp",
+  "output": "minimuduo/CMakeFiles/minimuduo.dir/net/eventloop.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/minimuduo",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/minimuduo.dir/net/inetaddress.cpp.o -c /home/yaolele/chatroom/minimuduo/net/inetaddress.cpp",
+  "file": "/home/yaolele/chatroom/minimuduo/net/inetaddress.cpp",
+  "output": "minimuduo/CMakeFiles/minimuduo.dir/net/inetaddress.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/minimuduo",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/minimuduo.dir/net/socket.cpp.o -c /home/yaolele/chatroom/minimuduo/net/socket.cpp",
+  "file": "/home/yaolele/chatroom/minimuduo/net/socket.cpp",
+  "output": "minimuduo/CMakeFiles/minimuduo.dir/net/socket.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/business/businessdispatcher/businessdispatcher.cpp.o -c /home/yaolele/chatroom/server/business/businessdispatcher/businessdispatcher.cpp",
+  "file": "/home/yaolele/chatroom/server/business/businessdispatcher/businessdispatcher.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/business/businessdispatcher/businessdispatcher.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/business/service/chatservice.cpp.o -c /home/yaolele/chatroom/server/business/service/chatservice.cpp",
+  "file": "/home/yaolele/chatroom/server/business/service/chatservice.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/business/service/chatservice.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/business/service/emailservice.cpp.o -c /home/yaolele/chatroom/server/business/service/emailservice.cpp",
+  "file": "/home/yaolele/chatroom/server/business/service/emailservice.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/business/service/emailservice.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/business/service/fileservice.cpp.o -c /home/yaolele/chatroom/server/business/service/fileservice.cpp",
+  "file": "/home/yaolele/chatroom/server/business/service/fileservice.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/business/service/fileservice.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/business/service/friendservice.cpp.o -c /home/yaolele/chatroom/server/business/service/friendservice.cpp",
+  "file": "/home/yaolele/chatroom/server/business/service/friendservice.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/business/service/friendservice.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/business/service/groupservice.cpp.o -c /home/yaolele/chatroom/server/business/service/groupservice.cpp",
+  "file": "/home/yaolele/chatroom/server/business/service/groupservice.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/business/service/groupservice.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/business/service/heartbeatservice.cpp.o -c /home/yaolele/chatroom/server/business/service/heartbeatservice.cpp",
+  "file": "/home/yaolele/chatroom/server/business/service/heartbeatservice.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/business/service/heartbeatservice.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/business/service/historyservice.cpp.o -c /home/yaolele/chatroom/server/business/service/historyservice.cpp",
+  "file": "/home/yaolele/chatroom/server/business/service/historyservice.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/business/service/historyservice.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/business/service/loginservice.cpp.o -c /home/yaolele/chatroom/server/business/service/loginservice.cpp",
+  "file": "/home/yaolele/chatroom/server/business/service/loginservice.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/business/service/loginservice.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/business/service/offlineservice.cpp.o -c /home/yaolele/chatroom/server/business/service/offlineservice.cpp",
+  "file": "/home/yaolele/chatroom/server/business/service/offlineservice.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/business/service/offlineservice.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/chatserver.cpp.o -c /home/yaolele/chatroom/server/chatserver.cpp",
+  "file": "/home/yaolele/chatroom/server/chatserver.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/chatserver.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/database/connectionpool/mysqlpool.cpp.o -c /home/yaolele/chatroom/server/database/connectionpool/mysqlpool.cpp",
+  "file": "/home/yaolele/chatroom/server/database/connectionpool/mysqlpool.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/database/connectionpool/mysqlpool.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/database/connectionpool/redispool.cpp.o -c /home/yaolele/chatroom/server/database/connectionpool/redispool.cpp",
+  "file": "/home/yaolele/chatroom/server/database/connectionpool/redispool.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/database/connectionpool/redispool.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/database/mysql/mysqlclient.cpp.o -c /home/yaolele/chatroom/server/database/mysql/mysqlclient.cpp",
+  "file": "/home/yaolele/chatroom/server/database/mysql/mysqlclient.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/database/mysql/mysqlclient.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/database/mysql/mysqlresult.cpp.o -c /home/yaolele/chatroom/server/database/mysql/mysqlresult.cpp",
+  "file": "/home/yaolele/chatroom/server/database/mysql/mysqlresult.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/database/mysql/mysqlresult.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/database/mysql/mysqlstatement.cpp.o -c /home/yaolele/chatroom/server/database/mysql/mysqlstatement.cpp",
+  "file": "/home/yaolele/chatroom/server/database/mysql/mysqlstatement.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/database/mysql/mysqlstatement.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/database/redis/redisclient.cpp.o -c /home/yaolele/chatroom/server/database/redis/redisclient.cpp",
+  "file": "/home/yaolele/chatroom/server/database/redis/redisclient.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/database/redis/redisclient.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/database/redis/redisresult.cpp.o -c /home/yaolele/chatroom/server/database/redis/redisresult.cpp",
+  "file": "/home/yaolele/chatroom/server/database/redis/redisresult.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/database/redis/redisresult.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/model/filemodel.cpp.o -c /home/yaolele/chatroom/server/model/filemodel.cpp",
+  "file": "/home/yaolele/chatroom/server/model/filemodel.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/model/filemodel.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/model/filereceivermodel.cpp.o -c /home/yaolele/chatroom/server/model/filereceivermodel.cpp",
+  "file": "/home/yaolele/chatroom/server/model/filereceivermodel.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/model/filereceivermodel.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/model/friendmodel.cpp.o -c /home/yaolele/chatroom/server/model/friendmodel.cpp",
+  "file": "/home/yaolele/chatroom/server/model/friendmodel.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/model/friendmodel.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/model/groupmodel.cpp.o -c /home/yaolele/chatroom/server/model/groupmodel.cpp",
+  "file": "/home/yaolele/chatroom/server/model/groupmodel.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/model/groupmodel.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/model/messagemodel.cpp.o -c /home/yaolele/chatroom/server/model/messagemodel.cpp",
+  "file": "/home/yaolele/chatroom/server/model/messagemodel.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/model/messagemodel.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/model/offlinemodel.cpp.o -c /home/yaolele/chatroom/server/model/offlinemodel.cpp",
+  "file": "/home/yaolele/chatroom/server/model/offlinemodel.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/model/offlinemodel.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/model/usermodel.cpp.o -c /home/yaolele/chatroom/server/model/usermodel.cpp",
+  "file": "/home/yaolele/chatroom/server/model/usermodel.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/model/usermodel.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/session/session.cpp.o -c /home/yaolele/chatroom/server/session/session.cpp",
+  "file": "/home/yaolele/chatroom/server/session/session.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/session/session.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/session/sessionmanager.cpp.o -c /home/yaolele/chatroom/server/session/sessionmanager.cpp",
+  "file": "/home/yaolele/chatroom/server/session/sessionmanager.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/session/sessionmanager.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -o CMakeFiles/chatserver_lib.dir/session/usersession.cpp.o -c /home/yaolele/chatroom/server/session/usersession.cpp",
+  "file": "/home/yaolele/chatroom/server/session/usersession.cpp",
+  "output": "server/CMakeFiles/chatserver_lib.dir/session/usersession.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/server",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/server -I/home/yaolele/chatroom/minimuduo -I/usr/include/mysql -I/usr/local/include/hiredis -I/home/yaolele/chatroom/common -std=gnu++17 -fsanitize=address -fno-omit-frame-pointer -o CMakeFiles/chatserver.dir/main.cpp.o -c /home/yaolele/chatroom/server/main.cpp",
+  "file": "/home/yaolele/chatroom/server/main.cpp",
+  "output": "server/CMakeFiles/chatserver.dir/main.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/client",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/client -I/home/yaolele/chatroom/common -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/chatclient.dir/client.cpp.o -c /home/yaolele/chatroom/client/client.cpp",
+  "file": "/home/yaolele/chatroom/client/client.cpp",
+  "output": "client/CMakeFiles/chatclient.dir/client.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/client",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/client -I/home/yaolele/chatroom/common -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/chatclient.dir/clientconnection.cpp.o -c /home/yaolele/chatroom/client/clientconnection.cpp",
+  "file": "/home/yaolele/chatroom/client/clientconnection.cpp",
+  "output": "client/CMakeFiles/chatclient.dir/clientconnection.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/client",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/client -I/home/yaolele/chatroom/common -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/chatclient.dir/filetransf.cpp.o -c /home/yaolele/chatroom/client/filetransf.cpp",
+  "file": "/home/yaolele/chatroom/client/filetransf.cpp",
+  "output": "client/CMakeFiles/chatclient.dir/filetransf.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/client",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/client -I/home/yaolele/chatroom/common -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/chatclient.dir/main.cpp.o -c /home/yaolele/chatroom/client/main.cpp",
+  "file": "/home/yaolele/chatroom/client/main.cpp",
+  "output": "client/CMakeFiles/chatclient.dir/main.cpp.o"
+},
+{
+  "directory": "/home/yaolele/chatroom/build/client",
+  "command": "/usr/bin/c++  -I/home/yaolele/chatroom/client -I/home/yaolele/chatroom/common -I/home/yaolele/chatroom/minimuduo -std=gnu++17 -o CMakeFiles/chatclient.dir/tcpclient.cpp.o -c /home/yaolele/chatroom/client/tcpclient.cpp",
+  "file": "/home/yaolele/chatroom/client/tcpclient.cpp",
+  "output": "client/CMakeFiles/chatclient.dir/tcpclient.cpp.o"
+}
+]

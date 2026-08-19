@@ -16,7 +16,6 @@ Client::~Client()
 {
 
 }
-
 constexpr int CHAT_WIDTH = 70;
 void Client::printChatMessage( uint32_t senderId,uint32_t currentUserId,const std::string& senderName,const std::string& content)
 {
@@ -1717,28 +1716,20 @@ void Client::removeGroupMember(int64_t groupId,int userId)
     msg.setTimestamp(time(nullptr));
     msg.payload()["groupId"] = groupId;
     msg.payload()["userId"] = userId;
-
     connection_->send(msg);
 }
 bool Client::waitGroupMemberList()
 {
     std::unique_lock<std::mutex> lock(groupMemberMutex_);
-
-    groupMemberCv_.wait(
-        lock,[this] { return groupMemberFinished_;});
-
+    groupMemberCv_.wait(lock,[this] { return groupMemberFinished_;});
     groupMemberFinished_ = false;
-
     return true;
 }
 bool Client::waitGroupJoinRequestList()
 {
     std::unique_lock<std::mutex> lock(groupJoinRequestMutex_);
-
     groupJoinRequestCv_.wait(lock,[this] {return groupJoinRequestFinished_;});
-
     groupJoinRequestFinished_ = false;
-
     return true;
 }
 void Client::groupMemberList(std::int64_t groupId)
@@ -1747,16 +1738,13 @@ void Client::groupMemberList(std::int64_t groupId)
     {
         return ;
     }
-
     Message msg;
     msg.setType(Messagetype::GroupMemberList);
     msg.setSequence(sequence_++);
     msg.setSenderId(userId_);
     msg.setTimestamp(time(nullptr));
     msg.payload()["groupId"] = groupId;
-
     connection_->send(msg);
-
     return ;
 }
 void Client::deleteAccount()
@@ -1769,16 +1757,11 @@ void Client::deleteAccount()
     Message msg;
     msg.setType(Messagetype::DeleteAccount);
     msg.setSenderId(userId_);
-
     connection_->send(msg);
 }
 bool Client::waitDeleteAccountResult()
 {
     std::unique_lock<std::mutex> lock(deleteAccountResultMutex_);
-
-    waitDeleteAccountCv_.wait(lock, [this] {
-        return deleteAccountFinished_;
-    });
-
+    waitDeleteAccountCv_.wait(lock, [this] { return deleteAccountFinished_;});
     return deleteAccountResult_;
 }

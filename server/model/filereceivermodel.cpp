@@ -10,8 +10,6 @@ FileReceiver FileReceiverModel::makeFileReceiver(MysqlResult& result)
 {
 
     FileReceiver receiver;
-
-
     receiver.setId(result.get<int64_t>(0));
     receiver.setFileId(result.get<int64_t>(1));
     receiver.setUserId(result.get<int32_t>(2));
@@ -27,8 +25,7 @@ bool FileReceiverModel::insert(FileReceiver& receiver)
 
      if(!conn)
     return false;
-    auto stmt =conn->prepare(R"(INSERT INTO file_receiver(file_id, user_id,status)
-      VALUES(?,?,?))");
+    auto stmt =conn->prepare(R"(INSERT INTO file_receiver(file_id, user_id,status)  VALUES(?,?,?))");
 
      if(!stmt)
    {
@@ -39,10 +36,7 @@ bool FileReceiverModel::insert(FileReceiver& receiver)
     stmt->bind(0,receiver.fileId());
     stmt->bind(1,receiver.userId());
     stmt->bind(2,receiver.status());
-
-   
       bool ok =stmt->execute();
-
        if(ok)
     {
     receiver.setId( conn->lastInsertId());
@@ -100,49 +94,33 @@ bool FileReceiverModel::updateStatus(int64_t fileId,int userid,int status)
     return ok;
 
 }
-std::vector<FileReceiver>
-FileReceiverModel::findByFileId(int64_t fileId)
+std::vector<FileReceiver>FileReceiverModel::findByFileId(int64_t fileId)
 {
     std::vector<FileReceiver> receivers;
-
     auto conn = MysqlPool::instance().getConnection();
     if(!conn)
     {
         return receivers;
     }
 
-    auto stmt = conn->prepare(
-        R"(SELECT id,
-                  file_id,
-                  user_id,
-                  status,
-                 UNIX_TIMESTAMP(create_time)
-           FROM file_receiver
-           WHERE file_id = ?
-           ORDER BY user_id)"
-    );
+    auto stmt = conn->prepare(  R"(SELECT id,  file_id, user_id, status,  UNIX_TIMESTAMP(create_time)   FROM file_receiver   WHERE file_id = ?  ORDER BY user_id)" );
 
     if(!stmt)
     {
         MysqlPool::instance().releaseConnection(conn);
         return receivers;
     }
-
     if(!stmt->bind(0, fileId))
     {
         MysqlPool::instance().releaseConnection(conn);
         return receivers;
     }
-
     try
     {
         auto result = stmt->query();
-
         while(result.fetch())
         {
-            receivers.emplace_back(
-                makeFileReceiver(result)
-            );
+            receivers.emplace_back( makeFileReceiver(result));////
         }
     }
     catch(const std::exception& e)
@@ -152,9 +130,7 @@ FileReceiverModel::findByFileId(int64_t fileId)
         MysqlPool::instance().releaseConnection(conn);
         return {};
     }
-
     MysqlPool::instance().releaseConnection(conn);
-
     return receivers;
 }
 bool FileReceiverModel::removeByFileId(int64_t fileId)
@@ -181,10 +157,7 @@ bool FileReceiverModel::removeByFileId(int64_t fileId)
         MysqlPool::instance().releaseConnection(conn);
         return false;
     }
-
     bool ok = stmt->execute();
-
     MysqlPool::instance().releaseConnection(conn);
-
     return ok;
 }

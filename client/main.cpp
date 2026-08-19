@@ -33,52 +33,44 @@ void groupMemberActionMenu(Client& client,int64_t groupId,int64_t userId,const s
 
 std::string formatFileSize(uint64_t size)
 {
+    const double KB = 1024.0;
+    const double MB = KB * 1024.0;
+    const double GB = MB * 1024.0;
     std::ostringstream oss;
-
-    if(size < 1024)
+    double value = size;
+    std::string unit = "B";
+    if (size >= GB)
     {
-        oss << size << " B";
+        value = size / GB;
+        unit = "GB";
     }
-    else if(size < 1024ULL * 1024)
+    else if (size >= MB)
     {
-        oss << std::fixed << std::setprecision(2) << static_cast<double>(size) / 1024.0 << " KB";
+        value = size / MB;
+        unit = "MB";
     }
-    else if(size < 1024ULL * 1024 * 1024)
+    else if (size >= KB)
     {
-        oss << std::fixed << std::setprecision(2) << static_cast<double>(size) / (1024.0 * 1024.0)<< " MB";
+        value = size / KB;
+        unit = "KB";
+    }
+    if (unit == "B")
+    {
+        oss << size << " " << unit;
     }
     else
     {
-        oss << std::fixed << std::setprecision(2)<< static_cast<double>(size) / (1024.0 * 1024.0 * 1024.0)<< " GB";
+        oss << std::fixed << std::setprecision(2)<< value << " " << unit;
     }
-
     return oss.str();
 }
-void disableEcho()
-{
-    termios tty;
 
-    tcgetattr(STDIN_FILENO, &tty);
-
-    tty.c_lflag &= ~ECHO;
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &tty);
-}
-
-void enableEcho()
-{
-    termios tty;
-
-    tcgetattr(STDIN_FILENO, &tty);
-    tty.c_lflag |= ECHO;
-    tcsetattr(STDIN_FILENO, TCSANOW, &tty);
-}
 int main(int argc, char* argv[])
 {
 
     EventLoop loop;
     Client client(&loop);
-    std::string serverIp="127.0.0.1";
+    std::string serverIp;
     uint16_t serverPort=8888;
     for(int i=1;i<argc;++i)
     {
@@ -98,10 +90,7 @@ int main(int argc, char* argv[])
         std::cout<<"connection failed\n";
         return -1;
     }
-    std:: thread menuThread([&client](){
-        loginMenu(client);
-    });
-
+    std:: thread menuThread([&client](){loginMenu(client);});
     std::cout<<"before loop"<<std::endl;
     loop.loop();
     std::cout<<"after loop"<<std::endl;
@@ -140,7 +129,6 @@ void loginMenu(Client& client)
         {
             std::string username;
             std::string pwd;
-
             std::cout<<"请输入用户名：";
             std::cin>>username;///记得加限制字数
             std::cout<<"请输入密码：";
@@ -156,10 +144,10 @@ void loginMenu(Client& client)
         }
         case 2:
         {
-            std::string email;
-            std::string code;
-            std::cout<<"请输入邮箱：";
-            std::cin>>email;
+        std::string email;
+        std::string code;
+        std::cout<<"请输入邮箱：";
+        std::cin>>email;
               std::cout<<"正在发送验证码......\n";
               client.sendLoginCode(email);
               if(!client.waitingLogincodeResult())
@@ -167,7 +155,6 @@ void loginMenu(Client& client)
                 std::cout<<"验证码发送失败，请稍后再试。\n";
                 break;
               }
-
               std::cout<<"验证码已经发送，请检查邮箱。\n";
               std::cout<<"请输入验证码：";
               std::cin>>code;
@@ -601,16 +588,11 @@ static std::string readChatMessage()
 
     struct termios oldTermios;
     struct termios newTermios;
-
     tcgetattr(STDIN_FILENO, &oldTermios);
-
     newTermios = oldTermios;
-
     newTermios.c_lflag &= ~(ICANON | ECHO);
-
     newTermios.c_cc[VMIN] = 1;
     newTermios.c_cc[VTIME] = 0;
-
     tcsetattr(STDIN_FILENO, TCSANOW, &newTermios);
 
     // 开启 bracketed paste
@@ -675,7 +657,6 @@ static std::string readChatMessage()
             if(!message.empty())
             {
                 message.pop_back();
-
                 std::cout << "\b \b";
                 std::cout.flush();
             }
@@ -709,20 +690,16 @@ void privateChatLoop(Client& client,int friendid,const std::string& friendname)
     while(true)
     {
         std::string text=readChatMessage();
-
         if(text.empty())
         {
            continue;
         }
-
         if(text == "/quit")
         {
             client.leaveChat();
             std::cout << "已退出聊天\n";
             return;
         }
-
-       
         client.privateChat(friendid, text);
     }
 }
@@ -743,7 +720,6 @@ void groupMenu(Client& client)
         return;
     }
 
-        //这里要等接收完
     const auto& groups=client.groups();
     std::string groupname;
     bool found=false;
@@ -762,7 +738,6 @@ void groupMenu(Client& client)
         return;
     }
         groupactionMenu(client,gid,groupname);
-    
     }
     
     return;
@@ -832,10 +807,8 @@ void groupactionMenu(Client& client,int groupid,const std::string& groupname)
             break;
             }
            case 0:
-          {
+          
             return;
-
-          }
           default:
            {
             break;
@@ -941,14 +914,14 @@ void receiveGroupFileMenu(Client& client,int groupid)
                 continue;
 
             fileIds.push_back(static_cast<int64_t>(file.fileId));
-            std::cout<< index<< ". "<< file.filename<< "       "<< file.filesize / 1024 / 1024<< " MB\n";
+            std::cout<< index<< ". "<< file.filename<< "       "<< formatFileSize(file.filesize)<< " MB\n";
             ++index;
         }
 
         std::cout << "0. 返回\n";
 
         int choice;
-        std::cout << "\n请选择：<<std::flush";
+        std::cout << "\n请选择："<<std::flush;
         if(!(std::cin >> choice))
         {
             std::cin.clear();

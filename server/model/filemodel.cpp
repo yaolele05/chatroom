@@ -170,9 +170,7 @@ bool FileModel::updateFilePath(std::int64_t fileId,const std::string& path)
      auto conn = MysqlPool::instance().getConnection();
     if (!conn)
     return false;
-    auto stmt = conn->prepare( R"(UPDATE file
-           SET file_path = ?
-           WHERE id = ?)");
+    auto stmt = conn->prepare( R"(UPDATE file  SET file_path = ?   WHERE id = ?)");
 
     if (!stmt)
     {
@@ -188,27 +186,18 @@ bool FileModel::updateFilePath(std::int64_t fileId,const std::string& path)
 bool FileModel::remove(std::int64_t fileId)
 {
     auto conn = MysqlPool::instance().getConnection();
-
     if(!conn)
     {
         return false;
     }
-
-    auto stmt = conn->prepare(
-        R"(DELETE FROM file WHERE id=?)"
-    );
-
+    auto stmt = conn->prepare( R"(DELETE FROM file WHERE id=?)" );
     if(!stmt)
     {
         MysqlPool::instance().releaseConnection(conn);
         return false;
     }
-
     stmt->bind(0, fileId);
-
     bool ok = stmt->execute();
-
     MysqlPool::instance().releaseConnection(conn);
-
     return ok;
 }

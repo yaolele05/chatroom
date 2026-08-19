@@ -21,8 +21,6 @@ class UserSession:public Session
      void setOnline(bool online);
      void setAuthenticated(bool v);
      void setUsername(const std::string& username);
-
-
      void updateHeartbeat();
      std::chrono::steady_clock::time_point lastHeartbeat() const;
      bool heartbeatTimeout(std::chrono::seconds timeout) const;///
@@ -30,9 +28,7 @@ class UserSession:public Session
      void setClientAddress(const std::string& ip,uint16_t port);
      uint16_t clientPort() const;
      const std::string& clientIp() const;
-     
     
-
      private:
      int userid_{0};
      std::string username_;

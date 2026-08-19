@@ -499,13 +499,25 @@ server.key
 
 # 项目编译
 
-进入项目根目录：
+要
+`sudo apt update
+sudo apt install build-essential cmake
+sudo apt install libssl-dev libcurl4-openssl-dev libmysqlclient-dev libhiredis-dev
+sudo apt install nlohmann-json3-dev`
+
+## 进入项目根目录：
 
 ```bash
 cd ~/chatroom
 ```
 
-第一次编译：
+```
+mkdir build
+cd build
+cmake ..
+```
+
+##以后编译：
 
 cd ~/chatroom/build
 cmake ..
@@ -538,21 +550,9 @@ cd ~/chatroom/build
 ```
 
 启动服务器：
-
+## 在build目录下
 ```bash
 ./server/chatserver
-```
-
-如果项目服务器默认监听：
-
-```text
-127.0.0.1:8888
-```
-
-则客户端可以直接连接：
-
-```bash
-./client/chatclient
 ```
 
 ---
@@ -564,20 +564,9 @@ cd ~/chatroom/build
 
 # 启动客户端
 
-默认连接服务器：
-
-```bash
-./client/chatclient
-```
-
-也可以指定服务器：
-
-```bash
-./client/chatclient  --<IP>  --<PORT>
-```
 
 启动方式
-
+##在build目录下
 例如：
 
 ./chatserver
@@ -639,15 +628,6 @@ sudo systemctl start redis-server
 ./build/client/chatclient
 ```
 
-然后使用不同账号登录进行：
-
-* 好友测试
-* 私聊测试
-* 群聊测试
-* 文件传输测试
-* 离线消息测试
-* 好友屏蔽测试
-
 ---
 
 
@@ -666,17 +646,11 @@ sudo systemctl start redis-server
 ```bash
 ip addr
 ```
-
-例如服务器电脑 IP：
-
-```text
-192.168.1.100
-```
-
 其他电脑运行：
 
 ```bash
-./client/chatclient 192.168.1.100 8888
+在build下
+./client/chatclient --ip 192.168.1.100  --port 8888
 ```
 
 如果无法连接，需要检查防火墙：
@@ -692,160 +666,3 @@ sudo ufw allow 8888/tcp
 ```
 
 ---
-
-# 常见服务端口
-
-ChatRoom 默认涉及以下服务：
-
-| 服务              | 默认地址        | 默认端口 |
-| --------------- | ----------- | ---: |
-| ChatRoom Server | 127.0.0.1   | 8888 |
-| MySQL           | 127.0.0.1   | 3306 |
-| Redis           | 127.0.0.1   | 6379 |
-| QQ SMTP         | smtp.qq.com |  465 |
-
-其中 ChatRoom Server 的监听端口可以通过启动参数修改。
-
----
-
-# 项目目录结构
-
-```text
-chatroom
-├── client
-│   ├── client.cpp
-│   ├── client.h
-│   ├── clientconnection.cpp
-│   ├── clientconnection.h
-│   ├── filetransf.cpp
-│   ├── filetransf.h
-│   ├── tcpclient.cpp
-│   ├── tcpclient.h
-│   └── main.cpp
-│
-├── common
-│   ├── buffer.cpp
-│   ├── buffer.h
-│   │
-│   ├── protocol
-│   │   ├── message.cpp
-│   │   ├── message.h
-│   │   ├── messagetype.h
-│   │   ├── Jsoncodec.cpp
-│   │   ├── Jsoncodec.h
-│   │   ├── packetcodec.cpp
-│   │   ├── packetcodec.h
-│   │   ├── protocol.cpp
-│   │   └── protocol.h
-│   │
-│   └── security
-│       ├── auth
-│       ├── crypto
-│       └── ssl
-│
-├── minimuduo
-│   └── net
-│       ├── acceptor
-│       ├── channel
-│       ├── epollpoller
-│       ├── eventloop
-│       ├── EventLoopThread
-│       ├── EventLoopThreadPool
-│       ├── socket
-│       ├── Tcpconnection
-│       └── TcpServer
-│
-├── server
-│   ├── business
-│   │   ├── businessdispatcher
-│   │   └── service
-│   │       ├── chatservice
-│   │       ├── emailservice
-│   │       ├── fileservice
-│   │       ├── friendservice
-│   │       ├── groupservice
-│   │       ├── heartbeatservice
-│   │       ├── historyservice
-│   │       ├── loginservice
-│   │       └── offlineservice
-│   │
-│   ├── database
-│   │   ├── connectionpool
-│   │   │   ├── mysqlpool
-│   │   │   └── redispool
-│   │   ├── mysql
-│   │   └── redis
-│   │
-│   ├── model
-│   │   ├── entity
-│   │   ├── filemodel
-│   │   ├── filereceivermodel
-│   │   ├── friendmodel
-│   │   ├── groupmodel
-│   │   ├── messagemodel
-│   │   ├── offlinemodel
-│   │   └── usermodel
-│   │
-│   ├── session
-│   ├── chatserver.cpp
-│   └── main.cpp
-│
-├── CMakeLists.txt
-└── README.md
-```
-
-
-##  MySQL 和 Redis 必须先启动
-
-启动服务器之前建议确认：
-
-```bash
-redis-cli ping
-```
-
-返回：
-
-```text
-PONG
-```
-
-同时确认 MySQL：
-
-```bash
-sudo systemctl status mysql
-```
-
-##  邮箱功能不是必须的
-
-如果只测试：
-
-* 密码登录
-* 好友
-* 私聊
-* 群聊
-* 文件传输
-
-可以不配置 SMTP。
-
-如果需要：
-
-* 注册验证码
-* 邮箱验证码登录
-* 找回密码
-
-则必须配置邮箱 SMTP。
-
-## 4. 文件传输目录
-
-服务端文件相关目录：
-
-```text
-server/files/
-```
-
-客户端/服务端进行文件传输测试时，需要确保相关目录存在并具有读写权限。
-
-如果你要用 dd 生成一个 2 GB 的文件：
-```
-dd if=/dev/zero of=test_2GB.bin bs=1M count=2048 status=progress
-```

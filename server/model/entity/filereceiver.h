@@ -19,9 +19,6 @@ public:
 
     }
 
-
-public:
-
     int64_t id() const
     {
         return id_;

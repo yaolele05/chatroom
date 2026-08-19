@@ -8,9 +8,6 @@ EventLoopThreadPool::EventLoopThreadPool(EventLoop* mainLoop):mainLoop_(mainLoop
 {
 
 }
-
-
-
 void EventLoopThreadPool::setThreadNum(int numThreads)
 {
     assert(!started_);
@@ -18,9 +15,6 @@ void EventLoopThreadPool::setThreadNum(int numThreads)
 
     numThreads_=numThreads;
 }
-
-
-
 void EventLoopThreadPool::start(const EventLoopThread::ThreadInitCallback& cb)
 {
     assert(!started_);

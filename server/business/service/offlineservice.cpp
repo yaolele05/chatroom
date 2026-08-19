@@ -124,6 +124,7 @@ void OfflineService::sendOfflineFile(Session*se)
     msg.payload()["fileName"]= file->fileName();
     msg.payload()["fileSize"]= file->fileSize();
     msg.payload()["sha256"]= file->fileSha256();
+    msg.payload()["groupId"]=file->groupId();
      se->send(msg);
    std::cout<<"send offline file notify "<<"fileId="<<file->id()<<std::endl;
 

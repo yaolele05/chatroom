@@ -56,7 +56,6 @@ void Chatserver::onMessage(const TcpConnectionptr& conn,Buffer* buffer)
     while(true)
         {
         auto result = PacketCodec::decode(*buffer,json);
-       // std::cout << "decode result=" << (int)result << std::endl;
         if(result == PacketCodec::DecodeResult::Needmoredata)
         {
             break;
@@ -68,8 +67,7 @@ void Chatserver::onMessage(const TcpConnectionptr& conn,Buffer* buffer)
             return;
         }
         std::cout << "decode ok" << std::endl;
-        
-         //std::cout << "raw json = " << json << std::endl;
+
         Message message;
         try
         {
@@ -82,14 +80,12 @@ void Chatserver::onMessage(const TcpConnectionptr& conn,Buffer* buffer)
             std::cerr<<"json error:"<<e.what()<<std::endl;
             continue;
         }
-        std::cout << "json ok" << std::endl;
         auto session =SessionManager::instance().getSession(conn.get());
         if(!session)
         {
             std::cerr<<"session not found\n";
             continue;
         }
-        std::cout << "dispatch..." << std::endl;
         bool ok =BusinessDispatcher::instance().dispatch(message,session.get());
 
       if(!ok)

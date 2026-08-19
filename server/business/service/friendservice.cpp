@@ -215,20 +215,13 @@ void FriendService::FriendList(const Message& msg,Session*se)
         item["online"] = online;
         item["blocked"]=blocked;
         item["blockedByFriend"]=blockedByfriend;
-
         int unreadCount=offlineModel.countPrivateUnread(userId,re.friendId());
-      
-     
          item["unreadCount"] = unreadCount;
-
       payload["friends"].push_back(item);
           
      }
     RedisPool::instance().releaseConnection(redis);
 
-    std::cout << "[FriendList] reply json = "
-          << JsonCodec::encode(reply)
-          << std::endl;
       se->send(reply);
 }
 bool FriendService::blockFriend(const Message& msg,Session* se)
@@ -498,27 +491,18 @@ void FriendService::friendRequestList(const Message& msg,Session* se)
 {
     if(se == nullptr || !se->authenticated())
         return;
-
-    auto userSession =
-        dynamic_cast<UserSession*>(se);
+    auto userSession =dynamic_cast<UserSession*>(se);
 
     if(userSession == nullptr)
         return;
-
     int userId = userSession->userid();
-
     FriendModel model;
-
     auto requests =model.findPendingFriendRequest(userId);
-
     UserModel userModel;
-
     Message reply;
-
     reply.setType(
         Messagetype::FriendRequestListResponse
     );
-
     reply.setSequence(msg.sequence());
     reply.setReceiverId(userId);
 
@@ -532,9 +516,7 @@ void FriendService::friendRequestList(const Message& msg,Session* se)
 
         if(!user)
             continue;
-
         nlohmann::json item;
-
         item["requestId"] = request.id;
         item["fromUserId"] =request.fromUserId;
         item["username"] = user->username();
@@ -544,10 +526,6 @@ void FriendService::friendRequestList(const Message& msg,Session* se)
         item["createTime"] =request.createTime;
         payload["requests"].push_back(item);
     }
-    std::cout
-    << "[FriendRequestList] reply="
-    << JsonCodec::encode(reply)
-    << std::endl;
 
     se->send(reply);
 }

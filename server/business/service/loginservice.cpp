@@ -755,7 +755,6 @@ void LoginService::deleteAccount(const Message& msg,Session* se)
         se->send(reply);
         return;
     }
-
     auto userSession =dynamic_cast<UserSession*>(se);
     if(userSession == nullptr)
     {
@@ -769,7 +768,6 @@ void LoginService::deleteAccount(const Message& msg,Session* se)
         se->send(reply);
         return;
     }
-
     int userId = userSession->userid();
 
     std::cout<< "[DeleteAccount] userid="<< userId<< std::endl;
@@ -789,7 +787,6 @@ void LoginService::deleteAccount(const Message& msg,Session* se)
 
         return;
     }
-
     auto redis =RedisPool::instance().getConnection();
     if(redis)
     {
@@ -800,14 +797,10 @@ void LoginService::deleteAccount(const Message& msg,Session* se)
 
         RedisPool::instance().releaseConnection(redis);
     }
-
     userSession->setAuthenticated(false);
     SessionManager::instance().unbindUser(userSession);
-
     std::cout<< "[DeleteAccount] "<< "unbind user "<< userId  << std::endl;
-
     reply.payload()["success"] = true;
     reply.payload()["message"] = "account deleted";
-
     se->send(reply);
 }

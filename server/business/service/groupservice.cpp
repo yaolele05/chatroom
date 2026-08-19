@@ -347,7 +347,7 @@ void GroupService::groupList(const Message& msg,Session* se)
   for(auto& group:groups)
   {
    std::cout<<"id="<<group.id()<<" name="<<group.name()<<std::endl;
-}
+  }
 
   Message reply;
   reply.setType(Messagetype::GroupListResponse);
@@ -489,7 +489,6 @@ void GroupService::setGroupRole(const Message& msg,Session* se)
     {
         return;
     }
-
     std::int64_t groupId =payload.at("groupId").get<std::int64_t>();
 
     int targetUserId =payload.at("userId").get<int>();
@@ -529,14 +528,10 @@ void GroupService::setGroupRole(const Message& msg,Session* se)
         se->send(reply);
         return;
     }
-
-
     if(targetUserId == operatorId)
     {
         reply.payload()["code"] = -1;
-        reply.payload()["message"] =
-            "不能修改群主角色";
-
+        reply.payload()["message"] = "不能修改群主角色";
         se->send(reply);
         return;
     }
@@ -549,15 +544,12 @@ void GroupService::setGroupRole(const Message& msg,Session* se)
     }
 
     GroupRole tarRole =static_cast<GroupRole>(roleValue);
-
     bool ok =model.setGroupMemberRole(groupId,targetUserId,tarRole);
 
     reply.payload()["code"] =ok ? 0 : -1;
     reply.payload()["groupId"] =  groupId;
-    reply.payload()["userId"] =
-        targetUserId;
-    reply.payload()["role"] =
-        roleValue;
+    reply.payload()["userId"] =targetUserId;
+    reply.payload()["role"] =roleValue;
 
     reply.payload()["message"] =ok? (tarRole == GroupRole::Admin? "已设置为管理员": "已取消管理员"): "设置管理员失败";
 
@@ -666,7 +658,6 @@ void GroupService::removeGroupMember( const Message& msg, Session* se)
         return;
     }
 
-    // 操作者必须是群成员
     if(!model.isGroupMember(groupId, operatorId))
     {
         reply.payload()["code"] = -1;
@@ -676,50 +667,35 @@ void GroupService::removeGroupMember( const Message& msg, Session* se)
         return;
     }
 
-    // 只有群主可以移除成员
     GroupRole operatorRole =  model.getGroupMemberRole(groupId, operatorId);
-
     if(operatorRole != GroupRole::Owner)
     {
         reply.payload()["code"] = -1;
-        reply.payload()["message"] =
-            "只有群主可以移除成员";
-
+        reply.payload()["message"] ="只有群主可以移除成员";
         se->send(reply);
         return;
     }
 
-    // 不能移除自己
     if(targetUserId == operatorId)
     {
         reply.payload()["code"] = -1;
-        reply.payload()["message"] =
-            "群主不能移除自己";
-
+        reply.payload()["message"] = "群主不能移除自己";
         se->send(reply);
         return;
     }
 
-    // 目标必须是群成员
     if(!model.isGroupMember(groupId, targetUserId))
     {
         reply.payload()["code"] = -1;
-        reply.payload()["message"] =
-            "目标用户不是群成员";
-
+        reply.payload()["message"] = "目标用户不是群成员";
         se->send(reply);
         return;
     }
-
-    // 正常情况下群主不能被移除，这里已经排除了自己，
-    // 目标不可能是另一个群主，因此直接删除即可。
     bool ok =model.removeGroupMember(groupId, targetUserId);
-
     reply.payload()["code"] = ok ? 0 : -1;
     reply.payload()["groupId"] = groupId;
     reply.payload()["userId"] = targetUserId;
-    reply.payload()["message"] =
-        ok ? "已移除群成员" : "移除群成员失败";
+    reply.payload()["message"] = ok ? "已移除群成员" : "移除群成员失败";
 
     se->send(reply);
 }

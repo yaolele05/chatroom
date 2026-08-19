@@ -192,10 +192,7 @@ void FileTransfer::sendChunks(uint64_t fileId,uint64_t offset)
       //  std::cout<<"[FileTransfer] send chunk"<<"fileId="<<task.fileId<<"offset="<<offset<<"size="<<n<<"nextOffset="<<task.offset<<"/"<<task.filesize<<std::endl;
   
 }
-bool FileTransfer::sendImage(uint32_t receiverId, const std::string& filename)
-{
-    return sendPrivateFile(receiverId,filename);///还要该群？
-}
+
 void FileTransfer::handleFileStart(const Message& msg)
 {
      uint64_t fileId = msg.payload()["fileId"];

@@ -8,18 +8,13 @@ find_library(MYSQLCLIENT_LIB
     mysqlclient
     REQUIRED
 )
-
 find_library(HIREDIS_LIB
     hiredis
     REQUIRED
 )
-
-
 file(GLOB_RECURSE SERVER_SRC
     *.cpp
 )
-
-
 list(REMOVE_ITEM SERVER_SRC
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
 )
@@ -28,7 +23,6 @@ list(REMOVE_ITEM SERVER_SRC
 add_library(chatserver_lib STATIC
     ${SERVER_SRC}
 )
-
 
 target_include_directories(chatserver_lib PUBLIC
 
@@ -40,7 +34,6 @@ target_include_directories(chatserver_lib PUBLIC
 
     /usr/local/include/hiredis
 )
-
 target_link_libraries(chatserver_lib PUBLIC
 
     minimuduo
@@ -52,11 +45,8 @@ target_link_libraries(chatserver_lib PUBLIC
     ${HIREDIS_LIB}
 
     OpenSSL::SSL
-
     OpenSSL::Crypto
-
     pthread
-
     CURL::libcurl
 )
 
@@ -64,8 +54,6 @@ target_link_libraries(chatserver_lib PUBLIC
 add_executable(chatserver
     main.cpp
 )
-
-
 target_link_libraries(chatserver
 
     chatserver_lib
