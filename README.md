@@ -844,3 +844,8 @@ server/files/
 ```
 
 客户端/服务端进行文件传输测试时，需要确保相关目录存在并具有读写权限。
+
+如果你要用 dd 生成一个 2 GB 的文件：
+```
+dd if=/dev/zero of=test_2GB.bin bs=1M count=2048 status=progress
+```
