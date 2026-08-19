@@ -6,11 +6,6 @@
 #include "EventLoopThread.h"
 class EventLoop;
 
-
-
-
-
-
 class EventLoopThreadPool:noncopyable
 {
     public:
@@ -27,7 +22,7 @@ class EventLoopThreadPool:noncopyable
     EventLoop* mainLoop_;
     
     bool started_;
-    
+     
     int numThreads_;
     int next_;
 
