@@ -1,6 +1,6 @@
 #include "usersession.h"
 #include <chrono>
-UserSession::UserSession(const TcpConnectionptr& conn):Session(conn),lastHeartbeat_(std::chrono::steady_clock::now())
+UserSession::UserSession(const TcpConnectionptr& conn):Session(conn),lastHeartbeat_(std::chrono::steady_clock::now()),lastActivity_(std::chrono::steady_clock::now())
 {
        
 }
@@ -11,6 +11,7 @@ void UserSession::login(int userid,const std::string& username)
     online_=true;
     authenticated_=true;
     updateHeartbeat();
+    updateActivity();
 }
 void UserSession::logout()
 {
@@ -25,6 +26,7 @@ void UserSession::reset()
     clientIp_.clear();
     clientPort_=0;
     lastHeartbeat_=std::chrono::steady_clock::now();
+     lastActivity_ = std::chrono::steady_clock::now();
 
 }
 

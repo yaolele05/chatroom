@@ -7,7 +7,7 @@
 #include <sys/eventfd.h>
 #include <cstdio>
 #include <thread>
-
+#include <chrono>
 static int createEventfd()
 {
     int fd=eventfd(0,EFD_NONBLOCK | EFD_CLOEXEC);
@@ -18,7 +18,7 @@ static int createEventfd()
     }
     return fd;
 }
-EventLoop::EventLoop():looping_(false),wakeupfd_(createEventfd()),quit_(false),callingPendingFunctors_(false),threadId_(std::this_thread::get_id()),poller_(new EpollPoller()),wakeupChannel_(new Channel(this,wakeupfd_)){
+EventLoop::EventLoop():looping_(false),wakeupfd_(createEventfd()),quit_(false),callingPendingFunctors_(false),threadId_(std::this_thread::get_id()),poller_(new EpollPoller()),wakeupChannel_(new Channel(this,wakeupfd_)),lastTimerCheck_(std::chrono::steady_clock::now()){
 
 
     wakeupChannel_->ReadCallback(std::bind(&EventLoop::handleRead,this));
@@ -41,12 +41,20 @@ void EventLoop::loop()
     }
 
     doPendingFunctors();
+    auto now = std::chrono::steady_clock::now();
+    if(now - lastTimerCheck_ >= std::chrono::seconds(10))
+    {
+         lastTimerCheck_ = now;
+        if(timerCallback_)
+        {
+       timerCallback_();
+         }
+        }
     }
     looping_=false;
 }
 void EventLoop::quit()
 {
-    
    quit_=true;
    if(!isInLoopThread())
    {
@@ -94,7 +102,6 @@ void EventLoop::wakeup()
     uint64_t one=1;
 
     ssize_t n=write(wakeupfd_,&one,sizeof(one));
-
     if(n!=sizeof(one))
     {
        if(errno!=EAGAIN)
@@ -131,3 +138,7 @@ std::thread::id EventLoop::threadId() const
 {
     return threadId_;
 } 
+void EventLoop::setTimerCallback(Functor cb)
+{
+    timerCallback_ = std::move(cb);
+}

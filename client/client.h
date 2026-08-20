@@ -58,19 +58,15 @@ class Client
      void groupList();
     void sendPrivateFile(uint32_t userId,const std::string& filename);
     void sendGroupFile(uint32_t groupId,const std::string& filename);
-    void sendImage(uint32_t userId,const std::string& filename);
     bool isLogin() const;
-   
-   
+    
      void disconnect();
      void quit();
     
      void privateHistory(uint32_t userid,const std::string& username);
      void groupHistory(uint32_t groupid);
      const std::vector<FileTransfer::PendingReceiveFile>&  pendingReceiveFiles() const;
-     //bool rejectFile(int64_t fileId);
      void acceptFile(int64_t fileId);
-     //showFileNotification();
   
     const nlohmann::json& friends() const
     {
@@ -136,7 +132,8 @@ class Client
 
    void deleteAccount();
   bool waitDeleteAccountResult();
-
+    
+     std::unique_ptr<TcpClient> tcpClient_;
 
     private:
     void onMessage(const Message& message);
@@ -153,11 +150,10 @@ class Client
     void handleHistory(const Message& msg);
     void handlerequestDownload(int64_t fileId);
     void handleOfflineFileNotify(const Message& msg);
-    
-
+   
    private:
    EventLoop* loop_;
-   std::unique_ptr<TcpClient> tcpClient_;
+
    std::unique_ptr<FileTransfer> fileTransfer_;
    std::shared_ptr<ClientConnection> connection_;
 

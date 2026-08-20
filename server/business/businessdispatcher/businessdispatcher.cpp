@@ -20,10 +20,7 @@ void BusinessDispatcher::registerHandler(const Messagetype type, Handler han)
 bool BusinessDispatcher::dispatch(const Message& msg ,Session* se)
 {
      std::cout<<"dispatch message type="<<static_cast<int>(msg.type())<<std::endl;
-    
-     /*std::cout << "dispatch message json="
-          << JsonCodec::encode(msg)
-          << std::endl;*/
+
    Handler handler;
    {
 

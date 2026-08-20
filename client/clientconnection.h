@@ -20,13 +20,17 @@ class ClientConnection:public std::enable_shared_from_this<ClientConnection>
     void setMessageCallback(MessageCallback cb);
     void connectEstablished();
     void connectDestroyed();
+    bool connected() const
+    {
+    return connected_;
+    }
     private:
     void handleRead();
      void handleWrite();
      void handleClose();
      void handleError();
     void sendInLoop(const std::string& data);
-
+     
     private:
     EventLoop* loop_;
      Socket socket_;
@@ -34,5 +38,6 @@ class ClientConnection:public std::enable_shared_from_this<ClientConnection>
     std::unique_ptr<Buffer> inputBuffer_;
     std::unique_ptr<Buffer> outputBuffer_;
     MessageCallback messageCallback_;
+    bool connected_{false};
 
 };

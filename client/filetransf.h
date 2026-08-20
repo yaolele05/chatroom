@@ -4,6 +4,7 @@
 #include <atomic>
 #include "clientconnection.h"
 #include <vector>
+#include <cstdlib>
 class FileTransfer
 {
     public:
@@ -63,8 +64,6 @@ class FileTransfer
     bool sendGroupFile(uint32_t groupId,const std::string& filename);
     void sendChunks(uint64_t fileId,uint64_t offset);
     bool sendImage(uint32_t receiverId,const std::string& filename);
-
-    void handleFileStart(const Message& msg);
     void handleFileChunk(const Message& msg);
     void handleFileFinish(const Message& msg);
     void handleAck(const Message& msg);
@@ -73,14 +72,13 @@ class FileTransfer
     void requestDownload(int64_t fileId);
     bool createReceiveTask(uint64_t fileId,const std::string& filename,uint64_t filesize,const std::string& sha256);
     const std::vector<PendingReceiveFile>&pendingReceiveFiles() const;
-    //bool removePendingReceiveFile(int64_t fileId);
     void acceptFile(int64_t fileId);
     void handleOfflineFileNotify(const Message& msg);
   
     private:
      
     std::shared_ptr <ClientConnection> connection_; 
-    std::string saveDirectory_{"downloads/"};
+    std::string saveDirectory_{ "./downloads"};
     std::unordered_map<uint64_t,SendTask> sendTasks_;
     std::unordered_map<uint64_t,ReceiveTask> receiveTasks_;
     PendingFile pendingFile_;

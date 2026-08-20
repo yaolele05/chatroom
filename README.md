@@ -517,7 +517,7 @@ cd build
 cmake ..
 ```
 
-##以后编译：
+## 以后编译：
 
 cd ~/chatroom/build
 cmake ..

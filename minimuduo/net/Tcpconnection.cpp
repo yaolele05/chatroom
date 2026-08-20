@@ -125,18 +125,22 @@ void TcpConnection::handleWrite()
     }
    
 }
+
 void TcpConnection::handleClose()
 {
-  std::cout<<"handleClose thread:"<<std::this_thread::get_id()<<std::endl;
-    state_=kDisconnected;
+   std::cout << "handleClose thread:"
+              << std::this_thread::get_id()
+              << std::endl;
+    if(state_ == kDisconnected)
+    {
+        return;
+    }
+    state_ = kDisconnected;
     channel_.disableAll();
- 
     if(closeCallback_)
     {
         closeCallback_(shared_from_this());
     }
-
-
 }
 void TcpConnection::handleError()
 {
@@ -177,7 +181,6 @@ void TcpConnection::sendInLoop(const std::string&msg)
    if(!(channel_.events()& EPOLLOUT) && outputBuffer_->readableBytes()==0)
    {
     std::cout<<"try write"<<std::endl;
-
     nwrote=socket_.write(msg.data(),msg.size());
 
     std::cout<<"write result="<<nwrote<<" errno="<<errno<<std::endl;
@@ -204,27 +207,33 @@ void TcpConnection::sendInLoop(const std::string&msg)
 }
 void TcpConnection::shutdown()
 {
-    if(state_==kConnected)
+    auto self(shared_from_this());
+    loop_->runInLoop([self]()
     {
-        state_=kDisconnecting;
-        socket_.shutdownWrite();
-        loop_->runInLoop([this]()
+        if(self->state_ == kConnected)
         {
-            if(!channel_.isWriting())
+            self->state_ = kDisconnecting;
+            if(!self->channel_.isWriting())
             {
-                socket_.shutdownWrite();
+                self->socket_.shutdownWrite();
             }
-        });
-    }
-   
-
+        }
+    });
 }
+
 void TcpConnection::forceClose()
 {
-   if(state_==kConnected || state_==kDisconnecting)
-   {
-      handleClose();
-   }
+    std::cout << "forceClose thread:"
+          << std::this_thread::get_id()
+          << std::endl;
+    auto self(shared_from_this());
+    loop_->runInLoop([self]()
+    {
+        if(self->state_ == kConnected || self->state_ == kDisconnecting)
+        {
+            self->handleClose();
+        }
+    });
 }
 bool TcpConnection::connected() const
 {

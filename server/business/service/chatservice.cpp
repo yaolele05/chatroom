@@ -93,7 +93,7 @@ void ChatService::PrivateChat(const Message& message,Session* session)
    reply.payload()["content"]=content;
 
    auto receiver =SessionManager::instance().getSession(receiverId);
-   //std::cout<< "receiver="<< receiver.get()<< std::endl;
+  
       OfflineMessageModel offlineModel;
       OfflineMessage offline;
       offline.setUserId(receiverId);

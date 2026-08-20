@@ -31,6 +31,7 @@ class EventLoop
     void queueInLoop(Functor cb);
    
     std::thread::id threadId() const;
+    void setTimerCallback(Functor cb);
 
 
     private:
@@ -48,6 +49,8 @@ class EventLoop
 
     std::mutex mutex_;
     std::vector<Functor> pendingFunctors_;
+    Functor timerCallback_;
+    std::chrono::steady_clock::time_point lastTimerCheck_;
     void wakeup();
     void handleRead();
     void doPendingFunctors();

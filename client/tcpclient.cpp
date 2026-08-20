@@ -16,7 +16,7 @@ TcpClient::~TcpClient()
 }
 bool TcpClient::connected() const
 {
-  return state_==State::kConnected;
+  return state_==State::kConnected && connection_ && connection_->connected();
 }
 std::shared_ptr<ClientConnection> TcpClient::connection() const
 {
@@ -60,7 +60,6 @@ bool TcpClient::connect(const std::string& ip, uint16_t port)
          return true;
 
 }
-
 void TcpClient::disconnect()
 {
     if(state_ == State::kDisconnected)

@@ -72,8 +72,7 @@ void HistoryService::historyRequest(const Message& msg, Session* se)
         if(!groupModel.isGroupMember(groupId, user->userid()))
         {
             response.payload()["code"] = 1;
-            response.payload()["message"] =
-                "你不是该群成员，无法查看群聊历史";
+            response.payload()["message"] = "你不是该群成员，无法查看群聊历史";
 
             se->send(response);
             return;

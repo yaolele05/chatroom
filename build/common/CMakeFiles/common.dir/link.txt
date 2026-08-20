@@ -1,2 +1,0 @@
-/usr/bin/ar qc libcommon.a CMakeFiles/common.dir/buffer.cpp.o CMakeFiles/common.dir/protocol/Jsoncodec.cpp.o CMakeFiles/common.dir/protocol/message.cpp.o CMakeFiles/common.dir/protocol/packetcodec.cpp.o CMakeFiles/common.dir/protocol/protocol.cpp.o CMakeFiles/common.dir/security/auth/token.cpp.o CMakeFiles/common.dir/security/crypto/base64.cpp.o CMakeFiles/common.dir/security/crypto/sha256.cpp.o CMakeFiles/common.dir/security/ssl/sslcontext.cpp.o CMakeFiles/common.dir/security/ssl/sslmanager.cpp.o
-/usr/bin/ranlib libcommon.a

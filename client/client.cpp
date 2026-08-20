@@ -355,13 +355,6 @@ void Client::sendGroupFile(uint32_t groupId,const std::string& filename)
          fileTransfer_->sendGroupFile(groupId,filename);
     }
 }
-void Client::sendImage(uint32_t userId,const std::string& filename)
-{
-    sendPrivateFile(userId,filename);
-}
-
-
-
 bool Client ::isLogin() const
 {
     return login_;
@@ -558,7 +551,7 @@ void Client::onMessage(const Message& msg)
     break;
 
 
-    case Messagetype::FileStart:
+   // case Messagetype::FileStart:
     case Messagetype::FileChunk:
     case Messagetype::FileFinish:
       handleFile(msg);
@@ -957,7 +950,7 @@ void Client::handlePrivateChat(const Message& msg)
         chatId = currentChatId_;
         peerName = currentChatPeerName_;
     }
-     //std::cout<< "[PrivateChat] " << "mode=" << static_cast<int>(mode) << " chatId=" << chatId<< " senderId=" << senderId<< " receiverId=" << receiverId<< " unread=" << unread<< " content=" << content << std::endl;
+   
     if(mode == ChatMode::Private && (chatId == senderId|| receiverId==chatId))
     {
         
@@ -1228,10 +1221,10 @@ void Client::handleFile(const Message& msg)
 {
     switch(msg.type())
     {
-        case Messagetype::FileStart:
+        /*case Messagetype::FileStart:
         fileTransfer_->handleFileStart(msg);
 
-        break;
+        break;*/
         case Messagetype::FileChunk:
           fileTransfer_->handleFileChunk(msg);
         std::cout<<"receive file chunk"<<std::endl;
@@ -1341,24 +1334,6 @@ void Client::handleHistory(const Message& msg)
 
     std::cout<<"==========================\n";
 
-}
-
-void Client::handlerequestDownload(int64_t fileId)
-{
-    if(!connection_)
-        return;
-
-    if(!login_)
-        return;
-
-    Message msg;
-
-    msg.setType(Messagetype::FileDownloadRequest);
-    msg.setSequence(sequence_++);
-    msg.payload()["fileId"] = fileId;
-    std::cout<< "[Client] send DownloadRequest"<< " fileId=" << fileId<< std::endl;
-
-    connection_->send(msg);
 }
 
 void Client::handleOfflineFileNotify(const Message& msg)

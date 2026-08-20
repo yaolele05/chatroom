@@ -56,15 +56,14 @@ void MysqlResult::bindResult()
     return;
    }
    const unsigned int fieldCount=mysql_num_fields(metadata_);
-   MYSQL_FIELD* fields=mysql_fetch_fields(metadata_);
-  
-
+   MYSQL_FIELD* fields=mysql_fetch_fields(metadata_); 
   binds_.assign(fieldCount, MYSQL_BIND{});
-
    lengths_.resize(fieldCount);
    nullFlags_.resize(fieldCount);
    types_.resize(fieldCount);
    buffers_.resize(fieldCount);
+   longBuffers_.resize(fieldCount);
+  
   for(unsigned int i=0;i<fieldCount;++i)
   {
     types_[i]=fields[i].type;
@@ -134,10 +133,10 @@ void MysqlResult::bindResult()
     throw std::runtime_error(mysql_stmt_error(stmt_));
     }
 }
+
 bool MysqlResult::fetchLongColumn(int index)
 {
-    if (index < 0 ||
-        index >= static_cast<int>(buffers_.size()))
+    if (index < 0 || index >= static_cast<int>(buffers_.size()))
     {
         return false;
     }
@@ -146,34 +145,46 @@ bool MysqlResult::fetchLongColumn(int index)
     {
         return true;
     }
+
     const unsigned long actualLength = lengths_[index];
+
     if (actualLength <= buffers_[index].size())
     {
         return true;
     }
-    std::cout<< "[MysqlResult] long field detected"<< " index=" << index  << " length=" << actualLength<< " oldBuffer=" << buffers_[index].size() << std::endl;
-    buffers_[index].resize(static_cast<std::size_t>(  actualLength) + 1);
+
+    std::cout << "[MysqlResult] long field detected"<< " index=" << index << " length=" << actualLength<< " oldBuffer=" << buffers_[index].size()<< std::endl;
+
+    longBuffers_[index].resize(actualLength);
+
     MYSQL_BIND bind{};
     bind.buffer_type = types_[index];
-    bind.buffer = buffers_[index].data();
-    bind.buffer_length =static_cast<unsigned long>( buffers_[index].size()   );
-    bind.length =  &lengths_[index];
-    bind.is_null =reinterpret_cast<bool*>(&nullFlags_[index]);
+    bind.buffer = longBuffers_[index].data();
+    bind.buffer_length =static_cast<unsigned long>(longBuffers_[index].size());
 
-    if (mysql_stmt_fetch_column( stmt_,&bind,static_cast<unsigned int>(index),0 ) != 0)
+    unsigned long length = 0;
+    bool isNull = false;
+
+    bind.length = &length;
+    bind.is_null = reinterpret_cast<bool*>(&isNull);
+
+    if (mysql_stmt_fetch_column(stmt_,&bind,static_cast<unsigned int>(index),0) != 0)
     {
-        std::cerr<< "mysql_stmt_fetch_column failed: "  << mysql_stmt_error(stmt_) << std::endl;
-
+        std::cerr << "mysql_stmt_fetch_column failed: "<< mysql_stmt_error(stmt_)<< std::endl;
         return false;
     }
+   
     return true;
 }
-
 bool MysqlResult::fetch()
 {
     if (!stmt_)
     {
         return false;
+    }
+    for (auto& buffer : longBuffers_)
+    {
+    buffer.clear();
     }
     int ret = mysql_stmt_fetch(stmt_);
     std::cout<<"mysql_stmt_fetch ret="<<ret <<std::endl;

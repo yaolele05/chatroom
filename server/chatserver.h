@@ -19,7 +19,8 @@ public:
     Chatserver(EventLoop* loop,const InetAddress& addr);
     void setThreadNum(int num);
     void start();
-
+    
+    void checkUsers();
 
 private:
 

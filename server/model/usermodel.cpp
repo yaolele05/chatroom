@@ -314,7 +314,6 @@ bool UserModel::deleteAccount(int userid)
 
         stmt->bind(0, userid);
         stmt->bind(1, userid);
-
         if(!stmt->execute())
         {
             rollback();

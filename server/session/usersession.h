@@ -3,6 +3,7 @@
 #include <string>
 #include <chrono>
 #include "../../minimuduo/net/callback.h"
+#include <mutex>
 class UserSession:public Session
 {
     public:
@@ -28,13 +29,24 @@ class UserSession:public Session
      void setClientAddress(const std::string& ip,uint16_t port);
      uint16_t clientPort() const;
      const std::string& clientIp() const;
-    
+     void updateActivity()
+    {
+         std::lock_guard<std::mutex> lock(activityMutex_);
+    lastActivity_ = std::chrono::steady_clock::now();
+     }
+     std::chrono::steady_clock::time_point lastActivity() const
+    {
+    return lastActivity_;
+    }
+
      private:
      int userid_{0};
      std::string username_;
      bool online_{false};
      bool authenticated_{false};
      std::chrono::steady_clock::time_point lastHeartbeat_;
+     std::chrono::steady_clock::time_point lastActivity_;
      std::string clientIp_;
      uint16_t clientPort_{0};
+     mutable std::mutex activityMutex_;
 };

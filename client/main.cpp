@@ -95,6 +95,7 @@ int main(int argc, char* argv[])
     loop.loop();
     std::cout<<"after loop"<<std::endl;
     menuThread.join();
+   
     return 0;
 }
 void loginMenu(Client& client)
@@ -461,7 +462,7 @@ void chatMenu(Client& client)
 }
 void friendMenu(Client& client)
 {
-    while(true)
+    while(client.tcpClient_->connected())
     {
   
     std::cout << "\n========== 好友 ==========\n";
@@ -507,7 +508,7 @@ void friendMenu(Client& client)
 }
 void friendactionMenu(Client& client,int friendid,const std::string& friendname)
 {
-     while(true)
+     while(client.tcpClient_->connected())
     {
      std::cout<<R"(
 ==========================
@@ -598,9 +599,7 @@ static std::string readChatMessage()
     // 开启 bracketed paste
     std::cout << "\033[?2004h";
     std::cout.flush();
-
     bool pasteMode = false;
-
     while(true)
     {
         char c;
@@ -637,16 +636,13 @@ static std::string readChatMessage()
             }
             continue;
         }
-
         if(pasteMode)
         {
-        
             message += c;
             std::cout << c;
             std::cout.flush();
             continue;
         }
-
         if(c == '\n' || c == '\r')
         {
             std::cout << '\n';
@@ -660,14 +656,12 @@ static std::string readChatMessage()
                 std::cout << "\b \b";
                 std::cout.flush();
             }
-
             continue;
         }
         message += c;
         std::cout << c;
         std::cout.flush();
     }
-
     // 恢复终端
     tcsetattr(STDIN_FILENO, TCSANOW, &oldTermios);
     // 关闭 bracketed paste
@@ -678,8 +672,7 @@ static std::string readChatMessage()
 void privateChatLoop(Client& client,int friendid,const std::string& friendname)
 {
     client.enterPrivateChat(friendid,friendname);
-   
- //client.privateHistory(friendid, friendname); 
+
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
 
     std::cout << "\n========================================\n";
@@ -982,7 +975,7 @@ void receiveFileActionMenu(Client& client,int64_t fileId)
 }
 void historyMenu(Client& client)
 {
-    while(true)
+    while(client.tcpClient_->connected())
     {
         std::cout << "\n========== 历史消息 ==========\n";
         std::cout << "1. 查看历史消息\n";
@@ -1326,8 +1319,6 @@ void groupMemberMenu(Client& client,int64_t groupId)
             client.waitGroupMemberList();
 
             const auto& members = client.groupMembers();
-
-          
             std::cout << "\n========== 群成员 ==========\n";
 
             if(members.empty())
@@ -1396,9 +1387,7 @@ void groupMemberActionMenu(Client& client,int64_t groupId,int64_t userId,const s
     while(true)
     {
         std::cout<< "\n========== 成员管理 ==========\n";
-
         std::cout << "成员: "<< username<< " (" << userId<< ")\n";
-
         std::cout << "1. 设置为管理员\n";
         std::cout << "2. 取消管理员\n";
         std::cout << "3. 移除成员\n";

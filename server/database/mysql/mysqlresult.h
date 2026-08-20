@@ -44,6 +44,9 @@ private:
     std::vector<enum_field_types> types_;
     std::vector<std::vector<char>> buffers_;
     static constexpr std::size_t kMaxBuffer = 4096;
+    std::vector<std::vector<char>> longBuffers_;
+    
+  
 };
 
 template<>
@@ -227,6 +230,10 @@ inline std::string MysqlResult::get<std::string>(int index) const
     if(isNull(index))
     {
         return "";
+    }
+     if(!longBuffers_[index].empty())
+    {
+        return std::string(longBuffers_[index].data(), lengths_[index]);
     }
     return std::string(buffers_[index].data(),lengths_[index]);
 }

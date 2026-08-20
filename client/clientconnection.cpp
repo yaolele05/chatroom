@@ -9,6 +9,7 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <nlohmann/json.hpp>
+#include <cstdlib>
 ClientConnection::ClientConnection(EventLoop* loop,int sockfd):loop_(loop),socket_(sockfd),channel_(loop,sockfd),inputBuffer_(new Buffer()),outputBuffer_(new Buffer())
 {
     channel_.ReadCallback(std::bind(&ClientConnection::handleRead,this));
@@ -36,9 +37,9 @@ void ClientConnection::send(const Message& msg)
    {
     auto self=shared_from_this();
     loop_->queueInLoop([self,packet]()
-{
+   {
     self->sendInLoop(packet);
-});
+   });
    }
 }
 void ClientConnection::sendInLoop(const std::string& data)
@@ -86,8 +87,10 @@ void ClientConnection::handleWrite()
 }
 void ClientConnection::handleClose()
 {
+    connected_=false;
     channel_.disableAll();
     channel_.remove();
+    
 }
 void ClientConnection::handleError()
 {
@@ -103,7 +106,7 @@ void ClientConnection::close()
 
 void ClientConnection::connectEstablished()
 {
-     std::cout<<"client connectEstablished fd="<<channel_.fd()<<std::endl;
+    connected_=true;
     channel_.tie(shared_from_this());
     channel_.enableReading();
     std::cout<<"events="<<channel_.events()<<std::endl;
@@ -166,6 +169,7 @@ void ClientConnection::handleRead()
     else if(n==0)
     {
         handleClose();
+        return ;
     }
     else
     {
