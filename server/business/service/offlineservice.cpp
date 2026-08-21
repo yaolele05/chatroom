@@ -66,6 +66,7 @@ bool OfflineService::sendChatOffline(const OfflineMessage& offline,Session* se)
    reply.setTimestamp(timestamp);
 
    reply.payload()["content"]=message->content();
+  
 
    se->send(reply);
    return true;
@@ -84,7 +85,8 @@ void OfflineService::sendGroupOffline(const OfflineMessage& offline,Session* se)
    reply.setTimestamp(timestamp);
    reply.payload()["groupId"]=message->groupId();
    reply.payload()["content"]=message->content();
-
+    reply.payload()["offline"] = true;
+    reply.payload()["senderName"] ="用户" + std::to_string(message->sendId());
    se->send(reply);
 
 }
@@ -100,7 +102,7 @@ void OfflineService::sendOfflineFile(Session*se)
     return;
     FileReceiverModel receiverModel;
       int userid=userSession->userid();
-
+   std::cout<< "[OfflineFile] userid=" << userid<< std::endl;
    auto receivers =receiverModel.findWaitingFiles(userid);
   std::cout<<"offline file count="<<receivers.size()<<std::endl;
    FileModel fileModel;
@@ -125,6 +127,7 @@ void OfflineService::sendOfflineFile(Session*se)
     msg.payload()["fileSize"]= file->fileSize();
     msg.payload()["sha256"]= file->fileSha256();
     msg.payload()["groupId"]=file->groupId();
+    std::cout<< "[SEND OfflineFileNotify] SOURCE=offlineservice"<< " fileId=" << file->id() << " receiverId=" << userid<< std::endl;
      se->send(msg);
    std::cout<<"send offline file notify "<<"fileId="<<file->id()<<std::endl;
 

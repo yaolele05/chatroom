@@ -25,8 +25,8 @@ class PacketCodec
         uint16_t version;
     };
 
-    static constexpr uint16_t kMagic=0xCAFE;
-    static constexpr uint16_t kVersion=1;
-    static constexpr uint32_t kHeaderSize=8;
-    static constexpr uint32_t kMaxPayloadSize = 1024* 1024; // 64KB
+    static const uint16_t kMagic=0xCAFE;
+    static const  uint16_t kVersion=1;
+    static  const uint32_t kHeaderSize=8;
+    static const  uint32_t kMaxPayloadSize = 1*1024* 1024; 
 };

@@ -67,7 +67,7 @@ void ChatService::PrivateChat(const Message& message,Session* session)
    }
 
    std::string content=payload.at("content").get<std::string>();
-   std::cout<<"PrivateChat:"<<"sender="<<sendId<<" receiver="<<receiverId<<" content="<<content<<std::endl;
+   //std::cout<<"PrivateChat:"<<"sender="<<sendId<<" receiver="<<receiverId<<" content="<<content<<std::endl;
    
    ChatMessage chat;
    chat.setSendId(sendId);
@@ -102,7 +102,7 @@ void ChatService::PrivateChat(const Message& message,Session* session)
       offline.setCreateTime(std::chrono::system_clock::now());
 
       bool ok = offlineModel.insert(offline);
-      std::cout<< "offline insert="<< ok<< " messageId="<< chat.id()<< std::endl;
+      //std::cout<< "offline insert="<< ok<< " messageId="<< chat.id()<< std::endl;
    if(receiver)
    {
       receiver->send(reply);
@@ -155,21 +155,12 @@ void ChatService::handlePrivateUnreadRequest(const Message& msg,const std::share
         return;
      uint32_t userId = userSession->userid();
     uint32_t peerId = msg.payload().value("peerId", 0);
-     
      if(peerId == 0)
         return;
-
-  
     Message checkMsg=msg;
     checkMsg.payload()["peerId"]=peerId;
     if(FriendService::instance().isFriendBlocked(checkMsg,session.get()))
     {
-          std::cout
-        << "[PrivateUnreadRequest]"
-        << " userId=" << userId
-        << " peerId=" << peerId
-        << std::endl;
-
         Message response;
         response.setType(Messagetype::PrivateChatResponse);
         response.setSenderId(userId);
@@ -177,58 +168,27 @@ void ChatService::handlePrivateUnreadRequest(const Message& msg,const std::share
         response.payload()["block"]=true;
         response.payload()["message"]="存在屏蔽关系，无法聊天";
         session->send(response);
-
         return;
 
     }
-
-    
     OfflineMessageModel offlineModel;
-
     auto offlineMessages =offlineModel.findPrivateMessages(userId,peerId);
-
     std::cout<< "[PrivateUnreadRequest]" << " unread count="<< offlineMessages.size()<< std::endl;
-  
     MessageModel messageModel;
-
     for(const auto& offline : offlineMessages)
     {
-        auto message =
-            messageModel.findById(
-                offline.messageId()
-            );
-
+        auto message =messageModel.findById(offline.messageId());
         if(!message)
         {
-            std::cerr
-                << "[PrivateUnreadRequest] "
-                << "message not found, messageId="
-                << offline.messageId()
-                << std::endl;
-
+            std::cerr<< "[PrivateUnreadRequest] " << "message not found, messageId="<< offline.messageId()<< std::endl;
             continue;
         }
-
         Message reply;
-
-        reply.setType(
-            Messagetype::PrivateChatResponse
-        );
-
-        reply.setSenderId(
-            message->sendId()
-        );
-
-        reply.setReceiverId(
-            message->receiverId()
-        );
-
-        reply.payload()["content"] =
-            message->content();
-
-        reply.payload()["messageId"] =
-            message->id();
-
+        reply.setType(Messagetype::PrivateChatResponse);
+        reply.setSenderId(message->sendId());
+        reply.setReceiverId( message->receiverId());
+        reply.payload()["content"] =message->content();
+        reply.payload()["messageId"] = message->id();
         reply.payload()["unread"] = true;
 
         session->send(reply);

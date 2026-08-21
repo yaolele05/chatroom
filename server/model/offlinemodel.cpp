@@ -23,7 +23,7 @@ bool OfflineMessageModel::insert(OfflineMessage& message)
     {
         return false;
     }
-    auto stmt=conn->prepare(R"(INSERT INTO offline_message(user_id,message_id,type,create_time)VALUES(?,?,?,?))");
+    auto stmt=conn->prepared(R"(INSERT INTO offline_message(user_id,message_id,type,create_time)VALUES(?,?,?,?))");
     if(!stmt)
     {
         MysqlPool::instance().releaseConnection(conn);
@@ -46,7 +46,7 @@ std::vector<OfflineMessage> OfflineMessageModel::findByUserId(int userid)
     {
         return messages;
     }
-   auto stmt=conn->prepare(
+   auto stmt=conn->prepared(
     "SELECT id,user_id,message_id,type,create_time "
     "FROM offline_message "   "WHERE user_id=? "  "ORDER BY create_time ASC");
 
@@ -72,7 +72,7 @@ bool OfflineMessageModel::remove(std::int64_t id)
     {
         return false;
     }
-    auto stmt=conn->prepare("DELETE FROM offline_message WHERE id=?");
+    auto stmt=conn->prepared("DELETE FROM offline_message WHERE id=?");
     if(!stmt)   
     {
         MysqlPool::instance().releaseConnection(conn);
@@ -90,7 +90,7 @@ bool OfflineMessageModel::clearUserMessages(int userid)
     {
         return false;
     }
-    auto stmt=conn->prepare("DELETE FROM offline_message WHERE user_id=?");
+    auto stmt=conn->prepared("DELETE FROM offline_message WHERE user_id=?");
     if(!stmt)
     {
         MysqlPool::instance().releaseConnection(conn);
@@ -110,7 +110,7 @@ int OfflineMessageModel::countPrivateUnread(int userId, int friendId)
         return 0;
     }
     
-    auto stmt = conn->prepare(R"(  SELECT COUNT(*)   FROM offline_message om  INNER JOIN message m
+    auto stmt = conn->prepared(R"(  SELECT COUNT(*)   FROM offline_message om  INNER JOIN message m
          ON om.message_id = m.id  WHERE om.user_id = ?  AND om.type = ?  AND m.sender_id = ?  AND m.receiver_id = ?   AND m.group_id = 0 )");
     if(!stmt)
     {
@@ -143,7 +143,7 @@ bool OfflineMessageModel::clearPrivateMessages(int userId, int friendId)
         return false;
     }
 
-    auto stmt = conn->prepare(R"( DELETE FROM offline_message  WHERE user_id = ?  AND type = ? AND message_id IN
+    auto stmt = conn->prepared(R"( DELETE FROM offline_message  WHERE user_id = ?  AND type = ? AND message_id IN
      (   SELECT id   FROM message  WHERE sender_id = ?  AND receiver_id = ?  AND group_id = 0  ) )");
 
     if(!stmt)
@@ -173,7 +173,7 @@ std::vector<OfflineMessage>OfflineMessageModel::findPrivateMessages(int userId, 
         return messages;
     }
 
-    auto stmt = conn->prepare(R"(  SELECT om.id,  om.user_id,   om.message_id,  om.type, om.create_time
+    auto stmt = conn->prepared(R"(  SELECT om.id,  om.user_id,   om.message_id,  om.type, om.create_time
     FROM offline_message om   INNER JOIN message m    ON om.message_id = m.id
    WHERE om.user_id = ?
    AND om.type = ?   AND m.sender_id = ?  AND m.receiver_id = ?    AND m.group_id = 0   ORDER BY om.create_time ASC )");

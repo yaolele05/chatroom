@@ -140,14 +140,14 @@ void GroupService::joinGroup(const Message& msg,Session*se)
     if(!group)
     {
         reply.payload()["code"] = -1;
-        reply.payload()["message"] = "group not exist";
+        reply.payload()["message"] = "群不存在";
         se->send(reply);
         return;
     }
     if(model.isGroupMember(groupId,userId))
     {
         reply.payload()["code"] = -1;
-        reply.payload()["message"] = "already joined";
+        reply.payload()["message"] = "已经加入群聊";
         se->send(reply);
         return;
     }
@@ -166,6 +166,28 @@ void GroupService::joinGroup(const Message& msg,Session*se)
     reply.payload()["groupId"] =groupId;
     reply.payload()["message"] =ok? "入群申请已发送" : "入群申请发送失败";
      se->send(reply);
+   if(ok)
+    {
+       auto members = model.findGroupMembers(groupId);
+       Message notice;
+        notice.setType(Messagetype::GroupJoinRequestNotify);
+       notice.setSequence(0);
+       notice.setReceiverId(0);
+     notice.payload()["groupId"] = groupId;
+      notice.payload()["message"] = "收到一条新的入群申请";
+      for(const auto& member : members)
+     {
+     auto role = member.role();
+     if(role == GroupRole::Owner || role == GroupRole::Admin)
+     {
+        auto tar = SessionManager::instance().getSession(member.userId());
+        if(tar)
+        {
+            tar->send(notice);
+        }
+      }
+     }
+    }
 }
 void GroupService::leaveGroup(const Message& msg, Session* se)
 {
@@ -270,8 +292,7 @@ void GroupService::groupChat(const Message& msg, Session* se)
     reply.setType(Messagetype::Error);
     reply.setSequence(msg.sequence());
     reply.payload()["code"] = -1;
-    reply.payload()["message"] =
-        "not group member";
+    reply.payload()["message"] = "not group member";
     se->send(reply);
 
     return;
@@ -298,7 +319,8 @@ void GroupService::groupChat(const Message& msg, Session* se)
     forward.payload()["groupId"] = groupId;
    forward.payload()["content"] = content;
    forward.payload()["senderName"]=userSession->username();
-   OfflineMessageModel offlineModel;
+   forward.payload()["offline"]=false;///实时消息通知
+   OfflineMessageModel offlineModel;//这是未读未读未读
    for(const auto& member:members)
    {
     int userid=member.userId();
@@ -399,6 +421,7 @@ void GroupService::groupJoinRequestList(const Message& msg,Session* se)
         return;
     }
 
+  
     // 在群里的角色
     GroupRole role =model.getGroupMemberRole( groupId,userId);
 
@@ -422,6 +445,7 @@ void GroupService::acceptJoinRequest(const Message& msg, Session* se)
 {
     if(se == nullptr || !se->authenticated())
         return;
+   
 
     auto userSession =dynamic_cast<UserSession*>(se);
     if(userSession == nullptr)
@@ -435,6 +459,11 @@ void GroupService::acceptJoinRequest(const Message& msg, Session* se)
     GroupModel model;
 
     bool ok = model.acceptJoinRequest(requestId,  actId);
+    std::cout << "[DEBUG] accept group request"
+          << " requestId=" << requestId
+          << " groupId=" << payload.value("groupId",0)
+          << " sequence=" <<msg.sequence()
+          << std::endl;
     Message reply;
     reply.setType( Messagetype::AcceptGroupJoinRequestResponse);
 

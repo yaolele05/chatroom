@@ -99,6 +99,10 @@ std::string JsonCodec::TypeToString(Messagetype type)
 
 case Messagetype::DeleteAccountResponse:
     return "delete_account_response";
+    case Messagetype::GroupJoinRequestNotify:
+    return "groupjoinrequest_notify";
+    case Messagetype::FriendRequestNotify:
+    return "friendrequest_notify";
     default: return"unknown";
     }
 }
@@ -277,6 +281,10 @@ Messagetype JsonCodec::StringToType(const std::string& type)
     return Messagetype::DeleteAccount;
    if(type == "delete_account_response")
     return Messagetype::DeleteAccountResponse;
+    if(type=="groupjoinrequest_notify")
+    return Messagetype::GroupJoinRequestNotify;
+    if(type=="friendrequest_notify")
+        return Messagetype::FriendRequestNotify;
 
     return Messagetype::unknown;
 }

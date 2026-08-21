@@ -90,7 +90,6 @@ int main(int argc, char* argv[])
     GroupService::instance().rigisterHandler();
     ChatService::instance().registerHandler();
     FileService::instance().registerHandler();
-    HeartbeatService::instance().registerHandler();
     HistoryService::instance().registerHandler();
 
     EventLoop loop;
@@ -101,7 +100,7 @@ int main(int argc, char* argv[])
     server.start();
 
     std::cout << "ChatServer started at "<< serverIp << ":" << serverPort << std::endl;
-
+  
     loop.loop();
 
     curl_global_cleanup();

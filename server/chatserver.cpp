@@ -7,11 +7,13 @@
 #include "database/connectionpool/redispool.h"
 #include <iostream>
 #include <functional>
+#include "business/service/heartbeatservice.h"
 Chatserver::Chatserver(EventLoop* loop, const InetAddress& addr):loop_(loop),server_(new TcpServer(loop, addr, "Chatserver"))
 { 
 
     server_->setConnectionCallback(std::bind(&Chatserver::onConnection,this,std::placeholders::_1));
     server_->setMessageCallback(std::bind(&Chatserver::onMessage,this,std::placeholders::_1,std::placeholders::_2));
+     HeartbeatService::instance().registerHandler();
     loop_->setTimerCallback(std::bind(&Chatserver::checkUsers, this));
 }
 void Chatserver::setThreadNum(int num)
@@ -86,10 +88,6 @@ void Chatserver::onMessage(const TcpConnectionptr& conn,Buffer* buffer)
             std::cerr<<"session not found\n";
             continue;
         }
-         if(message.type() != Messagetype::HeartBeat)
-        {
-          session->updateActivity();
-          }
         bool ok =BusinessDispatcher::instance().dispatch(message,session.get());
 
       if(!ok)
@@ -102,27 +100,23 @@ void Chatserver::onMessage(const TcpConnectionptr& conn,Buffer* buffer)
 }
 void Chatserver::checkUsers()
 {
-    auto now = std::chrono::steady_clock::now();
      std::cout << "[Timer] checkUsers()" << std::endl;
     auto sessions = SessionManager::instance().onlineUsers();
     for(const auto& session : sessions)
     {
         if(!session || !session->authenticated())
             continue;
-        auto inactive =std::chrono::duration_cast<std::chrono::seconds>(now - session->lastActivity()).count();
-        if(inactive >= 60)
-          {
-      std::cout << "[ChatServer] user timeout userid="<< session->userid() << std::endl;
-       auto conn = session->connection();
-      std::cout << "[ChatServer] connection ptr=" << conn.get() << std::endl;
-    if(!conn)
-    {
-        std::cout << "[ChatServer] connection is null!" << std::endl;
-        continue;
-    }
-    std::cout << "[ChatServer] BEFORE forceClose" << std::endl;
-    conn->forceClose();
-    std::cout << "[ChatServer] AFTER forceClose" << std::endl;
-     }
+      
+        if(session->heartbeatTimeout(std::chrono::seconds(60)))
+        {
+              auto conn = session->connection();
+               if(!conn)
+           {
+          std::cout << "[ChatServer] connection is null!" << std::endl;
+            continue;
+           }
+           std::cout<<"chatserver 心跳超时"<<std::endl;
+           conn->forceClose();
+        }
     }
 }

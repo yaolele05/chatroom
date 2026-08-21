@@ -1,9 +1,6 @@
 #include "heartbeatservice.h"
 #include "../../session/sessionmanager.h"
 #include "../../session/usersession.h"
-
-#include "../../database/connectionpool/redispool.h"
-#include "../../database/redis/redisclient.h"
 #include <nlohmann/json.hpp>
 #include <string>
 #include <iostream>
@@ -32,8 +29,12 @@ void HeartbeatService::heartbeat(const Message&,Session* session)
     {
         return;
     }
+     std::cout << "[Heartbeat] userid="  << session->userid()<< std::endl;
     updateSession(session);
-    updateRedis(session);
+     Message response;
+    response.setType(Messagetype::HeartBeatResponse);
+    session->send(response);
+     
 }
 void HeartbeatService::updateSession(Session* session)
 {
@@ -44,20 +45,4 @@ void HeartbeatService::updateSession(Session* session)
     }
 
     userSession->updateHeartbeat();
-}
-void HeartbeatService::updateRedis(Session* session)
-{
-   auto redis=RedisPool::instance().getConnection();
-   if(!redis)
-   {
-    return;
-   }
-   auto userSession=dynamic_cast<UserSession*>(session);
-
-   if(userSession==nullptr)
-   {
-    return;
-   }
-    redis->refreshHeartbeat(userSession->userid());
-
 }

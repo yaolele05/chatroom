@@ -21,12 +21,10 @@ bool MysqlClient::connect(const std::string& host,uint16_t port,const std::strin
 {
     if(mysql_==nullptr)
     return false;
-    MYSQL*ret=mysql_real_connect(mysql_,host.c_str(),username.c_str(),password.c_str(),database.c_str(),port,nullptr,0);
-   
+    MYSQL*ret=mysql_real_connect(mysql_,host.c_str(),username.c_str(),password.c_str(),database.c_str(),port,nullptr,0); 
     if(ret==nullptr)
     {
     std::cerr << "mysql connect failed: "<< mysql_error(mysql_)<< std::endl;
-
     return false;
     }
      mysql_set_character_set(mysql_,"utf8mb4");
@@ -35,11 +33,13 @@ bool MysqlClient::connect(const std::string& host,uint16_t port,const std::strin
 }
 void MysqlClient::disconnect()
 {
-  if(mysql_)
-  {
-    mysql_close(mysql_);
-    mysql_=nullptr;
-  }
+    stmthe.clear();
+
+    if(mysql_)
+    {
+        mysql_close(mysql_);
+        mysql_ = nullptr;
+    }
 }
 bool MysqlClient::connected() const
 {
@@ -106,4 +106,25 @@ int64_t MysqlClient::lastInsertId() const
     }
 
     return mysql_insert_id(mysql_);
+}
+MysqlStatement* MysqlClient::prepared(std::string_view sql)
+{
+    if(!mysql_)
+    {
+        return nullptr;
+    }
+    std::string key(sql);
+    auto it = stmthe.find(key);
+    if(it != stmthe.end())
+    {
+        return it->second.get();
+    }
+    auto stmt = std::make_unique<MysqlStatement>(mysql_);
+    if(!stmt->prepare(sql))
+    {
+        return nullptr;
+    }
+    auto* ptr = stmt.get();
+    stmthe.emplace(std::move(key), std::move(stmt));
+    return ptr;
 }

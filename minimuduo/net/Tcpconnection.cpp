@@ -128,9 +128,7 @@ void TcpConnection::handleWrite()
 
 void TcpConnection::handleClose()
 {
-   std::cout << "handleClose thread:"
-              << std::this_thread::get_id()
-              << std::endl;
+   std::cout << "handleClose thread:" << std::this_thread::get_id()<< std::endl;
     if(state_ == kDisconnected)
     {
         return;

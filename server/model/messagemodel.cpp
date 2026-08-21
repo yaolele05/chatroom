@@ -24,7 +24,7 @@ bool MessageModel::insert(ChatMessage& message)
         return false;
     }
 
-    auto stmt=conn->prepare(R"(INSERT INTO message(
+    auto stmt=conn->prepared(R"(INSERT INTO message(
         sender_id,receiver_id,group_id,type,content,create_time)VALUES(?,?,?,?,?,?)
     )");
 
@@ -60,7 +60,7 @@ std::optional<ChatMessage>MessageModel::findById(std::int64_t id)
         return std::nullopt;
     }
 
-    auto stmt=conn->prepare("SELECT "
+    auto stmt=conn->prepared("SELECT "
         "id,"
         "sender_id,"
         "receiver_id,"
@@ -97,7 +97,7 @@ std::vector<ChatMessage> MessageModel::findPriHistory(int userid, int peerid,siz
         return {};
     }
 
-    auto stmt=conn->prepare("SELECT "
+    auto stmt=conn->prepared("SELECT "
         "id,"
         "sender_id,"
         "receiver_id,"

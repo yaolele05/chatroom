@@ -62,11 +62,7 @@ void MysqlPool::releaseConnection(std::shared_ptr<MysqlClient> conn)
 {
    if(! conn)
    return;
-  
-      if (!conn->ping())
-    {
-        return;
-    }
+
 
    {
     std::lock_guard<std::mutex> lock(mutex_);

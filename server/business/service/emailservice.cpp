@@ -5,27 +5,20 @@
 #include <curl/curl.h>
 #include <iostream>
 #include <cstdlib>
+
 EmailService& EmailService::instance()
 {
     static EmailService instance;
       return instance;
 }
+EmailService::EmailService()
+{
+    
+}
 bool EmailService::send(const std::string& to,const std::string& subject,const std::string& body)
 {
-    const char* username=std::getenv("CHATROOM_SMTP_USER");
-    const char* password=std::getenv("CHATROOM_SMTP_PASSWORD");
-    std::cout << "[EmailService] username=" << (username ? username : "NULL")<< std::endl;
 
-    std::cout << "[EmailService] password="
-          << (password ? "SET" : "NULL")
-          << std::endl;
-    if(username==nullptr || password==nullptr)
-    {
-        std::cerr<<"[EmailService]SMTP environment "<<"variables not configured"<<std::endl;
-        return false;
-    }
-    username_=username;
-    password_=password;
+   std::cout << "[EmailService] ENTER send"<< " to=" << to << std::endl; 
     CURL* curl=curl_easy_init();
     if(curl==nullptr)
     {
@@ -81,13 +74,10 @@ bool EmailService::send(const std::string& to,const std::string& subject,const s
 
             return copySize;
         });
-
     curl_easy_setopt(curl,CURLOPT_READDATA,&uploadStatus);
     curl_easy_setopt(curl,CURLOPT_TIMEOUT,15L);
-
     CURLcode result =curl_easy_perform(curl);
     bool success =result == CURLE_OK;
-
     if(!success)
     {
         std::cerr<< "[EmailService] send failed: "<< curl_easy_strerror(result)<< std::endl;
@@ -96,10 +86,7 @@ bool EmailService::send(const std::string& to,const std::string& subject,const s
     {
         std::cout<< "[EmailService] send success"<< " to=" << to << std::endl;
     }
-
     curl_slist_free_all(recipients);
-
     curl_easy_cleanup(curl);
-
     return success;
 }

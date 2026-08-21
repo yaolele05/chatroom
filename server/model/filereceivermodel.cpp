@@ -90,6 +90,7 @@ bool FileReceiverModel::updateStatus(int64_t fileId,int userid,int status)
     stmt->bind(2,userid);
 
     bool ok=stmt->execute();
+    std::cout << "[FileReceiverModel] updateStatus"<< " fileId=" << fileId<< " userId=" << userid << " status=" << status<< " execute=" << ok << std::endl;
     MysqlPool::instance().releaseConnection(conn);
     return ok;
 

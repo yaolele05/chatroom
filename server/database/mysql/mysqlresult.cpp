@@ -34,14 +34,11 @@ bool MysqlResult::isStringType(enum_field_types type) const
     case MYSQL_TYPE_STRING:
     case MYSQL_TYPE_VAR_STRING:
     case MYSQL_TYPE_VARCHAR:
-
     case MYSQL_TYPE_TINY_BLOB:
     case MYSQL_TYPE_MEDIUM_BLOB:
     case MYSQL_TYPE_LONG_BLOB:
     case MYSQL_TYPE_BLOB:
-
     case MYSQL_TYPE_JSON:
-
         return true;
 
     default:
@@ -102,7 +99,6 @@ void MysqlResult::bindResult()
     case MYSQL_TYPE_TIMESTAMP:
     buffers_[i].resize(sizeof(MYSQL_TIME));
     break;
-
     case MYSQL_TYPE_STRING:
     case MYSQL_TYPE_VAR_STRING:
     case MYSQL_TYPE_VARCHAR:
@@ -147,12 +143,10 @@ bool MysqlResult::fetchLongColumn(int index)
     }
 
     const unsigned long actualLength = lengths_[index];
-
     if (actualLength <= buffers_[index].size())
     {
         return true;
     }
-
     std::cout << "[MysqlResult] long field detected"<< " index=" << index << " length=" << actualLength<< " oldBuffer=" << buffers_[index].size()<< std::endl;
 
     longBuffers_[index].resize(actualLength);

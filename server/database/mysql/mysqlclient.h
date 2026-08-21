@@ -5,6 +5,7 @@
 #include <memory>
 #include "mysqlresult.h"
 #include "mysqlstatement.h"
+#include <unordered_map>
 class MysqlClient
 {
     public:
@@ -32,6 +33,9 @@ class MysqlClient
     
     std::string error() const;
     bool ping();
+    MysqlStatement* prepared(std::string_view sql);
+    std::unordered_map<std::string,std::unique_ptr<MysqlStatement>> stmthe;
+
 
     private:
     MYSQL* mysql_{nullptr};

@@ -4,8 +4,6 @@
 #include <thread>
 #include <limits>
 #include <chrono>
-#include <termios.h>
-#include <unistd.h>
 #include <ctime>
 #include <iomanip>
 #include <sstream>
@@ -188,6 +186,7 @@ void loginMenu(Client& client)
         if(email.find('@') == std::string::npos || email.find('.') == std::string::npos)
          { 
          std::cout << "邮箱格式错误，请重新输入。" << std::endl;
+         break;
           return;
          }
                 std::cout << "正在发送验证码......\n";
@@ -582,91 +581,10 @@ void friendactionMenu(Client& client,int friendid,const std::string& friendname)
     }
     return;
 }
-
-static std::string readChatMessage()
+ std::string readChatMessage()
 {
     std::string message;
-
-    struct termios oldTermios;
-    struct termios newTermios;
-    tcgetattr(STDIN_FILENO, &oldTermios);
-    newTermios = oldTermios;
-    newTermios.c_lflag &= ~(ICANON | ECHO);
-    newTermios.c_cc[VMIN] = 1;
-    newTermios.c_cc[VTIME] = 0;
-    tcsetattr(STDIN_FILENO, TCSANOW, &newTermios);
-
-    // 开启 bracketed paste
-    std::cout << "\033[?2004h";
-    std::cout.flush();
-    bool pasteMode = false;
-    while(true)
-    {
-        char c;
-        if(read(STDIN_FILENO, &c, 1) <= 0)
-        {
-            break;
-        }
-        if(c == '\033')
-        {
-            std::string seq;
-            seq += c;
-            char ch;
-            while(read(STDIN_FILENO, &ch, 1) > 0)
-            {
-                seq += ch;
-                if(ch == '~')
-                {
-                    break;
-                }
-                if(seq.size() >= 8)
-                {
-                    break;
-                }
-            }
-            if(seq == "\033[200~")
-            {
-                pasteMode = true;
-                continue;
-            }
-            if(seq == "\033[201~")
-            {
-                pasteMode = false;
-                continue;
-            }
-            continue;
-        }
-        if(pasteMode)
-        {
-            message += c;
-            std::cout << c;
-            std::cout.flush();
-            continue;
-        }
-        if(c == '\n' || c == '\r')
-        {
-            std::cout << '\n';
-            break;
-        }
-        if(c == 127)
-        {
-            if(!message.empty())
-            {
-                message.pop_back();
-                std::cout << "\b \b";
-                std::cout.flush();
-            }
-            continue;
-        }
-        message += c;
-        std::cout << c;
-        std::cout.flush();
-    }
-    // 恢复终端
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldTermios);
-    // 关闭 bracketed paste
-    std::cout << "\033[?2004l";
-    std::cout.flush();
+    std::getline(std::cin, message);
     return message;
 }
 void privateChatLoop(Client& client,int friendid,const std::string& friendname)
@@ -682,7 +600,8 @@ void privateChatLoop(Client& client,int friendid,const std::string& friendname)
    
     while(true)
     {
-        std::string text=readChatMessage();
+        
+       std::string text = readChatMessage();
         if(text.empty())
         {
            continue;
@@ -825,8 +744,7 @@ void groupChatLoop(Client& client, int groupid, const std::string& groupname)
     std::cout << "\n========================================\n";
     while(true)
     {
-        std::string text=readChatMessage();
-
+        std::string text = readChatMessage();
         if(text.empty())
         {
             continue;
@@ -842,6 +760,11 @@ void groupChatLoop(Client& client, int groupid, const std::string& groupname)
 }
 void receiveFriendFileMenu(Client& client,int friendid)
 {
+    if(client.isFriendBlockedEitherWay(static_cast<uint32_t>(friendid)))
+    {
+        std::cout << "双方存在屏蔽关系，无法查看待接收文件\n";
+        return;
+    }
     while(true)
     {
         const auto& files = client.pendingReceiveFiles();

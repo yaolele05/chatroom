@@ -8,13 +8,40 @@
 #include <unistd.h>
 #include <iostream>
 #include <string>
+
 Client::Client(EventLoop* loop):loop_(loop),tcpClient_(std::make_unique<TcpClient>(loop))
 {
-
+   loop_->setTimerCallback([this]()
+    {
+        if(login_)
+        {
+            sendHeartbeat();
+        }
+    });
 }
 Client::~Client()
 {
 
+}
+void Client::sendHeartbeat()
+{
+    if(!login_)
+        return;
+    if(!connection_ || !connection_->connected())
+        return;
+    Message msg;
+    msg.setType(Messagetype::HeartBeat);
+    connection_->send(msg);
+}
+void Client::handleHeartbeat(const Message& msg)
+{
+   //std::cout<<"heartbeat response"<<std::endl;   
+}
+void Client::printNotification(const std::string& message)
+{
+    std::lock_guard<std::mutex> lock(chatOutputMutex_);
+
+    std::cout << "\n"<< "[通知] "<< message<< "\n";
 }
 constexpr int CHAT_WIDTH = 70;
 void Client::printChatMessage( uint32_t senderId,uint32_t currentUserId,const std::string& senderName,const std::string& content)
@@ -324,6 +351,7 @@ void Client::groupChat(uint32_t groupId,const std::string& text)
     msg.setSequence(sequence_++);
     msg.setSenderId(userId_);
     msg.setTimestamp(time(nullptr));
+    msg.payload()["offline"] = false;
     auto& payload=msg.payload();
     payload["groupId"]=groupId;
     payload["content"]=text;
@@ -573,7 +601,7 @@ void Client::onMessage(const Message& msg)
     int code=payload.value("code",-1);
     if(code != 0)
     {
-        std::cout << "message send failed: "<< payload.value("message", "") << std::endl;
+       std::cout << "[发送失败] "<< payload.value("message", "") << std::endl;
         break;
     }
     
@@ -585,14 +613,12 @@ void Client::onMessage(const Message& msg)
       if(stage=="start" ||stage=="chunk" ||stage=="finish")
       {
         fileTransfer_->handleAck(msg);
-       }
-      else
-      {
-        std::cout<< "[Client] normal message ack"<< std::endl;
+       
       }
      }
+        break;
     }
-    break;
+          break;
     }
     case Messagetype::Error:
     {
@@ -605,6 +631,9 @@ void Client::onMessage(const Message& msg)
     break;
     case Messagetype::OfflineFileNotify:
     {
+      auto & payload=msg.payload();
+      std::string sendername =payload.value("senderName", "用户" + std::to_string(msg.senderId()));
+      printNotification("收到"+sendername+"的待接收文件");
      handleOfflineFileNotify(msg);
     break;
     }
@@ -691,8 +720,7 @@ void Client::onMessage(const Message& msg)
     case Messagetype::GroupJoinRequestListResponse:
      {
     const auto& payload = msg.payload();
-
-    {
+      {
         std::lock_guard<std::mutex> lock(groupJoinRequestMutex_);
 
         groupJoinRequests_.clear();
@@ -897,7 +925,7 @@ void Client::handlePrivateChat(const Message& msg)
         int code = payload.value("code", -1);
         if(code != 0)
         {
-            std::cout << payload.value( "message","无法进入聊天") << std::endl;
+            std::cout <<"发送失败："<< payload.value( "message","无法进入聊天") << std::endl;
             leaveChat();
             return;
         }
@@ -922,11 +950,11 @@ void Client::handlePrivateChat(const Message& msg)
     {
     peerId = senderId;
      }
-     if (isFriendBlock(peerId))
+   /*  if (isFriendBlock(peerId))
     {
         std::cout << "该好友已被屏蔽，无法进入聊天"  << std::endl;
         return;
-    }
+    }*/
       if(payload.value("unreadDone", false))
     {
        
@@ -999,6 +1027,7 @@ void Client::handleGroupChat(const Message& msg)
 
     
     std::string content=payload.value("content","");
+    bool offline=payload.value("offline",false);
     std::string senderName =payload.value("senderName","用户" + std::to_string(senderId));
 
     ChatMode mode;
@@ -1009,24 +1038,28 @@ void Client::handleGroupChat(const Message& msg)
         mode = chatMode_;
         currentGroupId = currentChatId_;
     }
-    if(mode != ChatMode::Group ||currentGroupId != groupId)
+    if(mode == ChatMode::Group && currentGroupId == groupId)
     {
-        std::lock_guard<std::mutex> lock(chatOutputMutex_);
-      
-        return;
-    }
-
-    {
-        std::lock_guard<std::mutex> lock(chatOutputMutex_);
+       std::lock_guard<std::mutex> lock(chatOutputMutex_);
          std::cout << '\n';
         printChatMessage(senderId, userId_, senderName, content);
-       
+        return;
+
     }
- 
+
+    if(offline)//这个offline实际就是unread
+    {
+        return;
+    }
+    
+      printNotification("收到群 " + std::to_string(groupId) + " 的新消息");
+        return;
+  
 }
 void Client::handleFriend(const Message& msg)
 {
    const auto& payload=msg.payload();
+  
    switch(msg.type())
    {
     case Messagetype::AddFriendResponse:
@@ -1034,11 +1067,13 @@ void Client::handleFriend(const Message& msg)
     int code=payload.value("code",-1);
     if(code==0)
     {
-        std::cout<<"Add friend success"<<std::endl;
+         printNotification("添加好友申请发送" );
+       
     } 
     else
     {
-        std::cout<<"Add friend failed"<<std::endl;
+        
+         printNotification("添加好友失败" );
         std::cout<<payload.value("reason","");
     }
     break;
@@ -1048,11 +1083,12 @@ void Client::handleFriend(const Message& msg)
      int code=payload.value("code",-1);
       if(code==0)
       {
-        std::cout<<"Delete friend success" <<std::endl;
+       
+         printNotification("删除好友成功" );
       }
       else
       {
-        std::cout<<"Delete friend failed"<<std::endl;
+        std::cout<<"删除好友失败"<<std::endl;
       }
         break;
     }
@@ -1112,6 +1148,7 @@ void Client::handleFriend(const Message& msg)
     
     case Messagetype::FriendRequestListResponse:
    {
+
     if(!payload.contains("requests") || !payload["requests"].is_array())
     {
         std::cout << "好友申请列表为空\n";
@@ -1152,6 +1189,15 @@ void Client::handleFriend(const Message& msg)
 
     break;
     }
+    case Messagetype::GroupJoinRequestNotify:
+    {
+         printNotification(payload.value("message", "收到一条新的入群申请"));
+    break;
+    }
+    case Messagetype::FriendRequestNotify:
+    {
+        printNotification(payload.value("message","收到一条新的好友申请"));
+    }
     default:
     break;
    }
@@ -1167,8 +1213,9 @@ void Client::handleGroup(const Message& msg)
     case Messagetype::CreateGroupResponse:
         if(code == 0)
         {
-            std::cout << "create group success\n";
-            std::cout << "groupId="<< payload.value("groupId", 0)<< std::endl;
+           
+          printNotification("创建群成功" );
+            std::cout << "【groupId】="<< payload.value("groupId", 0)<< std::endl;
         }
         else
         {
@@ -1179,33 +1226,35 @@ void Client::handleGroup(const Message& msg)
     case Messagetype::JoinGroupResponse:
         if(code == 0)
         {
-            std::cout << "join group success\n";
+           
+         printNotification("入群申请发送" );
         }
         else
         {
-            std::cout << "join group failed: "<< message<< std::endl;
+           
+         printNotification("入群失败" );
         }
         break;
 
     case Messagetype::LeaveGroupResponse:
         if(code == 0)
         {
-            std::cout << "leave group success\n";
+          
+         printNotification("退出群聊成功" );
         }
         else
         {
-            std::cout << "leave group failed: "<< message<< std::endl;
+            std::cout << "退群失败： "<< message<< std::endl;
         }
         break;
 
     case Messagetype::GroupChatResponse:
         if(code == 0)
         {
-            std::cout << "group message send success\n";
         }
         else
         {
-            std::cout << "group message send failed: "<< message<< std::endl;
+            std::cout << "群消息发送失败 "<< message<< std::endl;
         }
         break;
 
@@ -1213,10 +1262,7 @@ void Client::handleGroup(const Message& msg)
         break;
     }
 }
-void Client::handleHeartbeat(const Message& msg)
-{
-   std::cout<<"heartbeat response"<<std::endl;   
-}
+
 void Client::handleFile(const Message& msg)
 {
     switch(msg.type())
@@ -1292,7 +1338,8 @@ void Client::handleHistory(const Message& msg)
     }
     if(!payload.contains("message"))
     {
-        std::cout<<"history empty\n";
+        
+         printNotification("历史记录为空" );
         return;
     }
     auto messages=payload["message"];
@@ -1383,13 +1430,12 @@ void Client::enterPrivateChat(uint32_t friendid,const std::string& friendname)
     if(!connection_ || !login_)
         return;
 
-    if (isFriendBlock(friendid))
+   /* if (isFriendBlock(friendid))
     {
-        std::cout << "该好友已被屏蔽，无法进入聊天"
-                  << std::endl;
+        std::cout << "该好友已被屏蔽，无法进入聊天"<< std::endl;
         return;
     }
-
+    */
     {std::lock_guard<std::mutex> lock(chatMutex_);
 
     currentChatId_ = friendid;

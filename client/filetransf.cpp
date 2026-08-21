@@ -149,7 +149,7 @@ void FileTransfer::sendChunks(uint64_t fileId,uint64_t offset)
         std::cout<<"[FileTransfer] file upload finished"<<"fileId="<<task.fileId<<std::endl;
         return;
     }
-    constexpr size_t CHUNK_SIZE = 64 * 1024;
+    size_t CHUNK_SIZE = 128 * 1024;
     std::vector<char> buffer(CHUNK_SIZE);
     task.file.clear();
     task.file.seekg(static_cast<std::streamoff>(offset),std::ios::beg);////seekg?
@@ -486,6 +486,9 @@ void FileTransfer::handleOfflineFileNotify(const Message& msg)//处理接收文�
     file.filesize=payload["fileSize"].get<uint64_t>();
     file.sha256=payload.value("sha256","");
     file.accepted=false;
+
+    
+
     pendingReceiveFiles_.push_back(file);
     //std::cout << "[FileTransfer] notify"<< " fileId=" << file.fileId<< " groupId=" << file.groupId<< " filename=" << file.filename << std::endl;
   }

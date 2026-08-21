@@ -132,10 +132,11 @@ class Client
 
    void deleteAccount();
   bool waitDeleteAccountResult();
-    
+   void printNotification(const std::string& message) ;
      std::unique_ptr<TcpClient> tcpClient_;
 
     private:
+    void sendHeartbeat();
     void onMessage(const Message& message);
     void handleLogin(const Message& msg);
     void handleLogout(const Message& msg);

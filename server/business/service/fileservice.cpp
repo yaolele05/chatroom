@@ -171,9 +171,7 @@ void FileService::fileStart(const Message& msg,Session*se)
         se->send(reply);
         return;
     }
-
     FileReceiver receiverInfo;
-
     receiverInfo.setFileId(file.id());
     receiverInfo.setUserId(receiverId);
     receiverInfo.setStatus(FileReceiver::Waiting);
@@ -541,7 +539,6 @@ void FileService::fileFinish(const Message& msg,Session* se)
     notify.payload()["fileSize"]=file->fileSize();
     notify.payload()["sha256"]=file->fileSha256();
     notify.payload()["groupId"]=file->groupId();
-
     receiver->send(notify);
     std::cout<<"[FileService]send file notify"<<"fileId:"<<fileId<<"receiverId:"<<receiverId<<std::endl;
    }
@@ -792,14 +789,12 @@ void FileService::sendNextChunk(SendTask& task)
         finish.payload()["sha256"] = task.file.fileSha256();
 
         task.receiver->send(finish);
-
         task.finished = true;
-
         std::cout<< "[FileService] send FILE_FINISH"<< " fileId=" << task.file.id()<< std::endl;
 
         return;
     }
-    constexpr size_t CHUNK_SIZE = 64 * 1024;
+    size_t CHUNK_SIZE = 512 * 1024;
     std::vector<char> buffer(CHUNK_SIZE);
 
     task.stream.clear();

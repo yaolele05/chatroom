@@ -9,6 +9,7 @@
 #include "../../database/connectionpool/redispool.h"
 #include<iostream>
 #include "../../../common/protocol/Jsoncodec.h"
+#include "../../session/sessionmanager.h"
 FriendService& FriendService::instance()
 {
     static FriendService service;
@@ -103,7 +104,7 @@ void FriendService::addFriend(const Message& msg,Session* se)
     se->send(reply);
 
     return;
-}
+    }
      if(model.isFriend(userId,friendId))
      {
     
@@ -127,7 +128,18 @@ void FriendService::addFriend(const Message& msg,Session* se)
     reply.payload()["friendId"] =friendId;
     reply.payload()["message"] =ok ? "好友申请已发送" : "好友申请发送失败";
     se->send(reply);
-
+    if(ok)
+    {
+        auto nse=SessionManager::instance().getSession(friendId);
+    if(nse)
+    {
+    Message notice;
+    notice.setType(Messagetype::FriendRequestNotify);
+    notice.setSequence(0);
+    notice.payload()["message"] = "收到一条新的好友申请";
+    nse->send(notice);
+     }
+   }
 }
 void FriendService:: deleteFriend(const Message& msg,Session* se)
 {
@@ -500,16 +512,11 @@ void FriendService::friendRequestList(const Message& msg,Session* se)
     auto requests =model.findPendingFriendRequest(userId);
     UserModel userModel;
     Message reply;
-    reply.setType(
-        Messagetype::FriendRequestListResponse
-    );
+    reply.setType(Messagetype::FriendRequestListResponse);
     reply.setSequence(msg.sequence());
     reply.setReceiverId(userId);
-
     auto& payload = reply.payload();
-
     payload["requests"] = nlohmann::json::array();/////
-
     for(const auto& request : requests)
     {
         auto user =userModel.findById(request.fromUserId);

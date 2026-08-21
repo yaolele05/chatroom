@@ -32,7 +32,7 @@ bool FileModel::insert(FileInfo& file)
        return false;
     }
 
-    auto stmt=conn->prepare(R"(INSERT INTO file(sender_id,receiver_id,group_id,file_name,file_path,file_size,file_sha256,transferred_size,completed,create_time)VALUES(?,?,?,?,?,?,?,?,?,?))");
+    auto stmt=conn->prepared(R"(INSERT INTO file(sender_id,receiver_id,group_id,file_name,file_path,file_size,file_sha256,transferred_size,completed,create_time)VALUES(?,?,?,?,?,?,?,?,?,?))");
 
     if(!stmt)
     {
@@ -73,7 +73,7 @@ bool FileModel::updatetransfSize(std::int64_t fileId,std::uint64_t size)
         return false;
     }
     auto stmt =
-    conn->prepare(R"(UPDATE file SET transferred_size=? WHERE id=?)");
+    conn->prepared(R"(UPDATE file SET transferred_size=? WHERE id=?)");
 
     if(!stmt)
     {
@@ -94,7 +94,7 @@ bool FileModel::completeFile( std::int64_t fileId)
     auto conn =MysqlPool::instance().getConnection();
     if(!conn)
         return false;
-    auto stmt =conn->prepare(R"(UPDATE file SET completed=1 WHERE id=?)");
+    auto stmt =conn->prepared(R"(UPDATE file SET completed=1 WHERE id=?)");
     if(!stmt)
     {
         MysqlPool::instance().releaseConnection(conn);
@@ -111,7 +111,7 @@ std::optional<FileInfo> FileModel::findById(std::uint64_t fileid)
     if(!conn)
     return std::nullopt;
 
-    auto stmt=conn->prepare(R"(SELECT id,sender_id,receiver_id,group_id,file_name,file_path,file_size,file_sha256,transferred_size,completed,create_time
+    auto stmt=conn->prepared(R"(SELECT id,sender_id,receiver_id,group_id,file_name,file_path,file_size,file_sha256,transferred_size,completed,create_time
         FROM file
         WHERE id=?)");
    if(!stmt)
@@ -141,7 +141,7 @@ std::optional<FileInfo> FileModel::findBySha256(const std::string& sha256)
     if(!conn)
     return std::nullopt;
 
-    auto stmt=conn->prepare(R"(SELECT id,sender_id,receiver_id,group_id,file_name,file_path,file_size,file_sha256,transferred_size,completed,create_time
+    auto stmt=conn->prepared(R"(SELECT id,sender_id,receiver_id,group_id,file_name,file_path,file_size,file_sha256,transferred_size,completed,create_time
         From file
         WHERE file_sha256=?)");
    if(!stmt)
@@ -170,7 +170,7 @@ bool FileModel::updateFilePath(std::int64_t fileId,const std::string& path)
      auto conn = MysqlPool::instance().getConnection();
     if (!conn)
     return false;
-    auto stmt = conn->prepare( R"(UPDATE file  SET file_path = ?   WHERE id = ?)");
+    auto stmt = conn->prepared( R"(UPDATE file  SET file_path = ?   WHERE id = ?)");
 
     if (!stmt)
     {
@@ -190,7 +190,7 @@ bool FileModel::remove(std::int64_t fileId)
     {
         return false;
     }
-    auto stmt = conn->prepare( R"(DELETE FROM file WHERE id=?)" );
+    auto stmt = conn->prepared( R"(DELETE FROM file WHERE id=?)" );
     if(!stmt)
     {
         MysqlPool::instance().releaseConnection(conn);

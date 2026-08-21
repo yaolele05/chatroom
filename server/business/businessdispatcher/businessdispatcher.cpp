@@ -33,7 +33,7 @@ bool BusinessDispatcher::dispatch(const Message& msg ,Session* se)
     }
     handler=it->second;
    }
-    std::cout<<"execute handler type="<<static_cast<int>(msg.type())<<std::endl;
+    //std::cout<<"execute handler type="<<static_cast<int>(msg.type())<<std::endl;
     handler(msg,se);
     return true;
 }
