@@ -20,6 +20,7 @@ class MysqlStatement
     bool bind(int index,int64_t value);
     bool bind(int index, uint64_t value); 
     bool execute();
+    uint64_t affectedRows() const;
   
     MysqlResult query();
     

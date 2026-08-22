@@ -148,3 +148,11 @@ MysqlResult MysqlStatement::query()
 
     return MysqlResult(stmt_);
 }
+uint64_t MysqlStatement::affectedRows() const
+{
+    if(!stmt_)
+    return 0;
+
+    return mysql_stmt_affected_rows(stmt_);
+
+}

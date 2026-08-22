@@ -20,11 +20,10 @@ class FriendModel
     bool isFriend(int userid,int friendid);
     
     std::vector<Friend> findFriends(int userid);
-    ///std::vector<User> findFriendUsers(...);
     bool createFriendRequest(int fid,int tid);
     std::vector<FriendRequest> findPendingFriendRequest(int userid);
     std::optional<FriendRequest> findFriendRequest(int reid);
-    bool updatefRequestStatus(int reid,int status);
+    bool updatefRequestStatus(int userId,int friendId,int status);
     private:
     Friend makeFriend(MysqlResult& result);
     

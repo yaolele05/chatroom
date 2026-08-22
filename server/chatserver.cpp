@@ -112,11 +112,11 @@ void Chatserver::checkUsers()
               auto conn = session->connection();
                if(!conn)
            {
-          std::cout << "[ChatServer] connection is null!" << std::endl;
+          //std::cout << "[ChatServer] connection is null!" << std::endl;
             continue;
            }
-           std::cout<<"chatserver 心跳超时"<<std::endl;
-           conn->forceClose();
+          // std::cout<<"chatserver 心跳超时"<<std::endl;
+          // conn->forceClose();
         }
     }
 }

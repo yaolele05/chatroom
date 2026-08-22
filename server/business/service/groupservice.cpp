@@ -332,11 +332,12 @@ void GroupService::groupChat(const Message& msg, Session* se)
     }
     else
     {
-        OfflineMessage offline;
-        offline.setUserId(userid);
-        offline.setMessageId(chat.id());
-        offline.setType(OfflineType::ChatMessage);
-        offline.setCreateTime(std::chrono::system_clock::now());
+    //只要是未读就记录
+     OfflineMessage offline;
+    offline.setUserId(userid);
+    offline.setMessageId(chat.id());
+    offline.setType(OfflineType::ChatMessage);
+    offline.setCreateTime(std::chrono::system_clock::now());
 
         offlineModel.insert(offline);
     }
@@ -443,6 +444,7 @@ void GroupService::groupJoinRequestList(const Message& msg,Session* se)
 }
 void GroupService::acceptJoinRequest(const Message& msg, Session* se)
 {
+  
     if(se == nullptr || !se->authenticated())
         return;
    
@@ -459,11 +461,7 @@ void GroupService::acceptJoinRequest(const Message& msg, Session* se)
     GroupModel model;
 
     bool ok = model.acceptJoinRequest(requestId,  actId);
-    std::cout << "[DEBUG] accept group request"
-          << " requestId=" << requestId
-          << " groupId=" << payload.value("groupId",0)
-          << " sequence=" <<msg.sequence()
-          << std::endl;
+   
     Message reply;
     reply.setType( Messagetype::AcceptGroupJoinRequestResponse);
 
@@ -725,6 +723,5 @@ void GroupService::removeGroupMember( const Message& msg, Session* se)
     reply.payload()["groupId"] = groupId;
     reply.payload()["userId"] = targetUserId;
     reply.payload()["message"] = ok ? "已移除群成员" : "移除群成员失败";
-
     se->send(reply);
 }

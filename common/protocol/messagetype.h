@@ -122,8 +122,10 @@ enum class Messagetype : uint16_t
     DeleteAccountResponse,
 
      FriendRequestNotify,
-    GroupJoinRequestNotify
-    
+    GroupJoinRequestNotify,
+   
+    PrivateUnreadNotify,
+    GroupUnreadNotify
 
 
 };

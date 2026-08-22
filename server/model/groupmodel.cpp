@@ -671,13 +671,7 @@ bool GroupModel::setGroupMemberRole(std::int64_t groupid,int userid, GroupRole r
     }
 
    
-    auto checkStmt = conn->prepare(R"(
-        SELECT role
-        FROM chatgroup_member
-        WHERE group_id = ?
-          AND user_id = ?
-        LIMIT 1
-    )");
+    auto checkStmt = conn->prepare(R"( SELECT role  FROM chatgroup_member   WHERE group_id = ?     AND user_id = ?   LIMIT 1    )");
 
     if(!checkStmt)
     {

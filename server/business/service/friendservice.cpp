@@ -17,7 +17,6 @@ FriendService& FriendService::instance()
 }
 void FriendService::registerHandler()
 {
-    //std::cout << "register Friend handler" << std::endl;
     auto& dispatcher=BusinessDispatcher::instance();
    dispatcher.registerHandler(Messagetype::AddFriend,[](const Message& message,Session* session)
 {
@@ -130,6 +129,8 @@ void FriendService::addFriend(const Message& msg,Session* se)
     se->send(reply);
     if(ok)
     {
+        
+
         auto nse=SessionManager::instance().getSession(friendId);
     if(nse)
     {
@@ -139,6 +140,15 @@ void FriendService::addFriend(const Message& msg,Session* se)
     notice.payload()["message"] = "收到一条新的好友申请";
     nse->send(notice);
      }
+     else
+     {
+        OfflineMessage offline;
+        offline.setUserId(friendId);
+        offline.setType(OfflineType::FriendRequest);
+        OfflineMessageModel offlinemodel;
+        offlinemodel.insert(offline);
+     }
+
    }
 }
 void FriendService:: deleteFriend(const Message& msg,Session* se)
@@ -435,7 +445,7 @@ void FriendService::acceptFriend(const Message& msg,Session* se)
     if(ok)
     {
         
-        model.updatefRequestStatus(requestId, 1);
+        model.updatefRequestStatus(request->fromUserId,request->toUserId, 1);
     }
 
     Message reply;
@@ -485,7 +495,7 @@ void FriendService::rejectFriend(const Message& msg,Session* se)
         return;
     }
 
-    bool ok=model.updatefRequestStatus(requestId,2);
+    bool ok=model.updatefRequestStatus(request->fromUserId,request->toUserId,1);
     
     Message reply;
     reply.setType(Messagetype::RejectFriendResponse);

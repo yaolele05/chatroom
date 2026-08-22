@@ -1167,7 +1167,7 @@ void groupJoinRequestMenu(Client& client, int64_t groupid)
 
         const auto& request = requests[choice - 1];
     int64_t requestId =request.value("requestId",static_cast<int64_t>(0));
-        int userId =request.value("userId", 0);
+        int userId =request.value("fromUserId", 0);
         std::string username =request.value( "nickname",request.value("username", ""));
         while(true)
         {

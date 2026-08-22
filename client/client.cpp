@@ -823,8 +823,42 @@ void Client::onMessage(const Message& msg)
     waitDeleteAccountCv_.notify_all();
     break;
      }
+      case Messagetype::GroupJoinRequestNotify:
+    {
+        auto & payload=msg.payload();
+         printNotification(payload.value("message", "收到一条新的入群申请"));
+    break;
+    }
+    case Messagetype::FriendRequestNotify:
+    {
+        auto & payload=msg.payload();
+        printNotification(payload.value("message","收到一条新的好友申请"));
+        break;
+    }
+    case Messagetype::PrivateUnreadNotify:
+    {
+       auto & payload=msg.payload();
+       uint32_t  friendid=payload.value("friendId",0);
+       std::string username=payload.value("userName","");
+       int unreadc=payload.value("unreadCount",0);
+       if(unreadc<=0)
+       break;
 
-
+         std::cout << "\n[通知] 你有 " << unreadc << " 条来自用户 "<< username  << " 的未读消息\n";
+         break;
+    }
+    case Messagetype::GroupUnreadNotify:
+    {
+        auto & payload=msg.payload();
+       uint32_t  friendid=payload.value("groupId",0);
+       std::string groupname=payload.value("groupName","");
+       int unreadc=payload.value("unreadCount",0);
+        if(unreadc<=0)
+       break;
+       
+         std::cout << "\n[通知] 你有 " << unreadc << " 条来自群聊 "<< groupname  << " 的未读消息\n";
+         break;
+    }
     default:
     std::cout<<"unknow message type"<<std::endl;
     break;
@@ -847,9 +881,7 @@ void Client::handleRegister(const Message& msg)
         registerResult_ = success;
         registerFinished_ = true;
     }
-
     registerCv_.notify_one();
-
     if(success)
     {
         std::cout << "注册成功！\n";
@@ -1074,7 +1106,7 @@ void Client::handleFriend(const Message& msg)
     {
         
          printNotification("添加好友失败" );
-        std::cout<<payload.value("reason","");
+        std::cout<<payload.value("message","")<<std::endl;
     }
     break;
     }
@@ -1189,15 +1221,7 @@ void Client::handleFriend(const Message& msg)
 
     break;
     }
-    case Messagetype::GroupJoinRequestNotify:
-    {
-         printNotification(payload.value("message", "收到一条新的入群申请"));
-    break;
-    }
-    case Messagetype::FriendRequestNotify:
-    {
-        printNotification(payload.value("message","收到一条新的好友申请"));
-    }
+   
     default:
     break;
    }
@@ -1429,13 +1453,6 @@ void Client::enterPrivateChat(uint32_t friendid,const std::string& friendname)
 
     if(!connection_ || !login_)
         return;
-
-   /* if (isFriendBlock(friendid))
-    {
-        std::cout << "该好友已被屏蔽，无法进入聊天"<< std::endl;
-        return;
-    }
-    */
     {std::lock_guard<std::mutex> lock(chatMutex_);
 
     currentChatId_ = friendid;

@@ -10,6 +10,8 @@
 #include "../businessdispatcher/businessdispatcher.h"
 #include <chrono>
 #include "friendservice.h"
+#include "offlineservice.h"
+
 using json=nlohmann::json;
 ChatService& ChatService::instance()
 {
@@ -106,6 +108,7 @@ void ChatService::PrivateChat(const Message& message,Session* session)
    if(receiver)
    {
       receiver->send(reply);
+      OfflineService::instance().sendPrivateUnreadNotify(receiverId,receiver.get());
     
    }
  

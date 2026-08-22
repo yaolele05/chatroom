@@ -103,6 +103,10 @@ case Messagetype::DeleteAccountResponse:
     return "groupjoinrequest_notify";
     case Messagetype::FriendRequestNotify:
     return "friendrequest_notify";
+    case Messagetype::PrivateUnreadNotify:
+    return "privateunread_notify";
+    case Messagetype::GroupUnreadNotify:
+    return "groupunread_notify";
     default: return"unknown";
     }
 }
@@ -285,7 +289,11 @@ Messagetype JsonCodec::StringToType(const std::string& type)
     return Messagetype::GroupJoinRequestNotify;
     if(type=="friendrequest_notify")
         return Messagetype::FriendRequestNotify;
-
+        if(type=="privateunread_notify")
+        return Messagetype::PrivateUnreadNotify;
+        if(type=="groupunread_notify")
+        return Messagetype::GroupUnreadNotify;
+   
     return Messagetype::unknown;
 }
 std::string JsonCodec::encode(const Message& message)

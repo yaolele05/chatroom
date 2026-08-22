@@ -57,6 +57,10 @@ bool FriendModel::addFriend( Friend& rela)
 }
 bool FriendModel::removeFriend(int userid,int friendid)
 {
+     if(!isFriend(userid, friendid))
+    {
+        return false;
+    }
     auto conn=MysqlPool::instance().getConnection();
     if(!conn)
     {
@@ -140,20 +144,14 @@ std::vector<Friend> FriendModel::findFriends(int userid)
 }
 bool FriendModel::createFriendRequest(int fromUserId,int toUserId)
 {
+
     auto conn = MysqlPool::instance().getConnection();
     if(!conn)
     {
         return false;
     }
 
-    auto stmt = conn->prepare(R"(
-        SELECT id, status
-        FROM friend_request
-        WHERE from_user_id = ?
-        AND to_user_id = ?
-        ORDER BY id DESC
-        LIMIT 1
-    )");
+    auto stmt = conn->prepare(R"( SELECT id, status  FROM friend_request  WHERE from_user_id = ? AND to_user_id = ?  ORDER BY id DESC   LIMIT 1)");
 
     if(!stmt)
     {
@@ -177,44 +175,22 @@ bool FriendModel::createFriendRequest(int fromUserId,int toUserId)
             return true;
         }
         //已经接受了
-        if(status == 1)
-        {
-            MysqlPool::instance().releaseConnection(conn);
-            return false;
-        }
-
-        // 以前拒绝过，现在允许重新申请
-        auto updateStmt = conn->prepare(R"(
-        UPDATE friend_request
-        SET status = 0,
-        create_time = CURRENT_TIMESTAMP
-        WHERE id = ?
-        )");
-
+    
+             //允许重新申请
+        auto updateStmt = conn->prepare(R"( UPDATE friend_request  SET status = 0, create_time = CURRENT_TIMESTAMP WHERE id = ?)");
         if(!updateStmt)
         {
          MysqlPool::instance().releaseConnection(conn);
         return false;
         }
-
         updateStmt->bind(0, requestId);
         bool ok = updateStmt->execute();
         MysqlPool::instance().releaseConnection(conn);
 
         return ok;
     }
-
     // 第一次申请
-    auto insertStmt = conn->prepare(R"(
-        INSERT INTO friend_request
-        (
-        from_user_id,
-        to_user_id,
-        status,
-        create_time
-        )
-        VALUES (?, ?, 0, CURRENT_TIMESTAMP)
-    )");
+    auto insertStmt = conn->prepare(R"( INSERT INTO friend_request ( from_user_id, to_user_id, status,  create_time )    VALUES (?, ?, 0, CURRENT_TIMESTAMP))");
 
     if(!insertStmt)
     {
@@ -226,34 +202,20 @@ bool FriendModel::createFriendRequest(int fromUserId,int toUserId)
     insertStmt->bind(1, toUserId);
 
     bool ok = insertStmt->execute();
-
     MysqlPool::instance().releaseConnection(conn);
-
     return ok;
 }
 std::vector<FriendModel::FriendRequest>FriendModel::findPendingFriendRequest(int userId)
 {
     std::vector<FriendRequest> requests;
-
     auto conn = MysqlPool::instance().getConnection();
-
     if(!conn)
     {
         return requests;
     }
-
-    auto stmt = conn->prepare(R"(
-        SELECT
-        id,
-        from_user_id,
-        to_user_id,
-        status,
-        UNIX_TIMESTAMP(create_time)
-        FROM friend_request
-        WHERE to_user_id = ?
-        AND status = 0
-        ORDER BY create_time DESC
-    )");
+    auto stmt = conn->prepare(R"( SELECT  id,  from_user_id,  to_user_id,   status,
+        UNIX_TIMESTAMP(create_time)    FROM friend_request
+        WHERE to_user_id = ?  AND status = 0  ORDER BY create_time DESC)");
 
     if(!stmt)
     {
@@ -265,7 +227,6 @@ std::vector<FriendModel::FriendRequest>FriendModel::findPendingFriendRequest(int
     while(result.fetch())
     {
         FriendRequest request;
-
         request.id = result.get<int>(0);
         request.fromUserId = result.get<int>(1);
         request.toUserId = result.get<int>(2);
@@ -288,16 +249,7 @@ std::optional<FriendModel::FriendRequest> FriendModel::findFriendRequest(int req
         return std::nullopt;
     }
 
-    auto stmt = conn->prepare(R"(
-        SELECT
-            id,
-            from_user_id,
-            to_user_id,
-            status,
-            UNIX_TIMESTAMP(create_time)
-        FROM friend_request
-        WHERE id = ?
-    )");
+    auto stmt = conn->prepare(R"( SELECT id,  from_user_id,  to_user_id,  status,     UNIX_TIMESTAMP(create_time)  FROM friend_request      WHERE id = ? )");
 
     if(!stmt)
     {
@@ -328,7 +280,7 @@ std::optional<FriendModel::FriendRequest> FriendModel::findFriendRequest(int req
 
     return request;
 }
-bool FriendModel::updatefRequestStatus(int requestId,int status)
+bool FriendModel::updatefRequestStatus(int userId,int friendId,int status)
 {
     auto conn = MysqlPool::instance().getConnection();
 
@@ -337,11 +289,10 @@ bool FriendModel::updatefRequestStatus(int requestId,int status)
         return false;
     }
 
-    auto stmt = conn->prepare(R"(
-        UPDATE friend_request
-        SET status = ?
-        WHERE id = ?
-    )");
+    auto stmt = conn->prepare(R"( UPDATE friend_request SET status = ? 
+         WHERE status = 0
+         AND(from_user_id=? AND to_user_id=?)
+         OR (from_user_id=? AND to_user_id=?))");
 
     if(!stmt)
     {
@@ -349,12 +300,12 @@ bool FriendModel::updatefRequestStatus(int requestId,int status)
         return false;
     }
 
-    stmt->bind(0, status);
-    stmt->bind(1, requestId);
-
+    stmt->bind(0,status);
+    stmt->bind(1, userId);
+    stmt->bind(2,friendId);
+    stmt->bind(3,friendId);
+    stmt->bind(4,userId);
     bool ok = stmt->execute();
-
     MysqlPool::instance().releaseConnection(conn);
-
     return ok;
 }
