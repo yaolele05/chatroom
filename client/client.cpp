@@ -361,9 +361,9 @@ void Client::sendPrivateFile(uint32_t userId,const std::string& filename)
 {
     if(!login_)
     return;
-     if (isFriendBlock(userId))
+     if (isFriendBlockedEitherWay(userId))
     {
-        std::cout << "该好友已被屏蔽，无法发送文件"  << std::endl;
+        std::cout << "双方有屏蔽，无法发送文件"  << std::endl;
         return;
     }
     if(fileTransfer_)
@@ -982,11 +982,7 @@ void Client::handlePrivateChat(const Message& msg)
     {
     peerId = senderId;
      }
-   /*  if (isFriendBlock(peerId))
-    {
-        std::cout << "该好友已被屏蔽，无法进入聊天"  << std::endl;
-        return;
-    }*/
+
       if(payload.value("unreadDone", false))
     {
        
@@ -1599,8 +1595,7 @@ bool Client::isFriendBlockedEitherWay(uint32_t friendId) const
         if(friendUser.value("id", 0u) == friendId)
         {
             bool blocked = friendUser.value("blocked", false);
-            bool blockedByFriend =
-                friendUser.value("blockedByFriend", false);
+            bool blockedByFriend = friendUser.value("blockedByFriend", false);
 
             return blocked || blockedByFriend;
         }
