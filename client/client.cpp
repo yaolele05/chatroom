@@ -885,7 +885,7 @@ void Client::onMessage(const Message& msg)
           mode = chatMode_;                                              
          chatId = currentChatId_;                                       
      }                                                                  
-    if(mode == ChatMode::Private && chatId == friendid)                
+      if(mode == ChatMode::Private && chatId == friendid)                
         break;      
         
         

@@ -665,12 +665,20 @@ void friendactionMenu(Client& client,int friendid,const std::string& friendname)
     std::getline(std::cin, message);
     return message;
 }
+void eraseEchoedInput()                                               
+{                                                                       
+   // \x1b[1A 回到刚回显的那行                          
+   // \r       回到行首                                                  
+   // \x1b[2K  清除整行                                                  
+    std::cout << "\x1b[1A" << "\r" << "\x1b[2K" << std::flush;            
+}             
 void privateChatLoop(Client& client,int friendid,const std::string& friendname)
 {
     client.enterPrivateChat(friendid,friendname);
+   
 
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-     EchoGuard echoOff; 
+ 
     std::cout << "\n========================================\n";
     std::cout << "与 " << friendname << " 聊天\n";
     std::cout << "输入 /quit 退出聊天\n";
@@ -690,6 +698,7 @@ void privateChatLoop(Client& client,int friendid,const std::string& friendname)
             std::cout << "已退出聊天\n";
             return;
         }
+         eraseEchoedInput();   
         client.privateChat(friendid, text);
     }
 }
@@ -815,7 +824,7 @@ void groupChatLoop(Client& client, int groupid, const std::string& groupname)
 
     client.enterGroupChat(groupid);
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    EchoGuard echoOff; 
+  
     std::cout << "\n========================================\n";
     std::cout << "进入群聊：" << groupname << "\n";
     std::cout << "输入 /quit 退出群聊\n";
@@ -833,6 +842,7 @@ void groupChatLoop(Client& client, int groupid, const std::string& groupname)
             std::cout << "已退出群聊\n";
             return;
         }
+         eraseEchoedInput(); 
         client.groupChat(groupid, text);
     }
 }
