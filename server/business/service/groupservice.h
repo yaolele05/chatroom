@@ -13,6 +13,7 @@ class GroupService
     void leaveGroup(const Message& msg,Session* se);
     void groupChat(const Message& msg,Session* se);
     void groupList(const Message& msg,  Session*se);
+    void groupChatRead(const Message& msg, Session* se);
 
     void groupJoinRequestList(const Message& msg,Session* se);
     void acceptJoinRequest(const Message& msg,Session* se);

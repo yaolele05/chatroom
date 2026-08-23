@@ -65,8 +65,8 @@ class Client
     
      void privateHistory(uint32_t userid,const std::string& username);
      void groupHistory(uint32_t groupid);
-     const std::vector<FileTransfer::PendingReceiveFile>&  pendingReceiveFiles() const;
-     void acceptFile(int64_t fileId);
+     const std::vector<FileTransfer::PendingReceiveFile>  pendingReceiveFiles() const;
+     bool acceptFile(int64_t fileId);
   
     const nlohmann::json& friends() const
     {
@@ -134,6 +134,8 @@ class Client
   bool waitDeleteAccountResult();
    void printNotification(const std::string& message) ;
      std::unique_ptr<TcpClient> tcpClient_;
+
+     std::vector<FileTransfer::DownloadProgress> downloadProgressList() const;
 
     private:
     void sendHeartbeat();

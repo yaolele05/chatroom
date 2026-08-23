@@ -632,10 +632,18 @@ void Client::onMessage(const Message& msg)
     case Messagetype::OfflineFileNotify:
     {
       auto & payload=msg.payload();
+       uint32_t groupId = payload.value("groupId", 0);
       std::string sendername =payload.value("senderName", "用户" + std::to_string(msg.senderId()));
+      if (groupId != 0)
+    {
+        printNotification("收到群" + std::to_string(groupId) + "的待接收文件");
+    }
+    else
+    {
       printNotification("收到"+sendername+"的待接收文件");
-     handleOfflineFileNotify(msg);
-    break;
+    }
+       handleOfflineFileNotify(msg);
+       break;
     }
     case Messagetype::BlockFriendResponse:
     {
@@ -1293,7 +1301,6 @@ void Client::handleFile(const Message& msg)
         break;*/
         case Messagetype::FileChunk:
           fileTransfer_->handleFileChunk(msg);
-        std::cout<<"receive file chunk"<<std::endl;
         break;
         case Messagetype::FileFinish:
 
@@ -1408,16 +1415,17 @@ void Client::handleOfflineFileNotify(const Message& msg)
 
   fileTransfer_->handleOfflineFileNotify(msg);
 }
-const std::vector<FileTransfer::PendingReceiveFile>& Client::pendingReceiveFiles() const
+const std::vector<FileTransfer::PendingReceiveFile> Client::pendingReceiveFiles() const
 {
     return fileTransfer_->pendingReceiveFiles();
 }
 
-void Client::acceptFile(int64_t fileId)
+bool Client::acceptFile(int64_t fileId)
 {
     if(!fileTransfer_)
-        return;
+        return false;
     fileTransfer_->acceptFile(fileId);
+    return true;
 }
 void Client::registerUser(const std::string& username,const std::string& password, const std::string& email,const std::string& code)
 {
@@ -1467,10 +1475,18 @@ void Client::enterPrivateChat(uint32_t friendid,const std::string& friendname)
 }
 void Client::enterGroupChat(uint32_t groupid)
 {
-    std::lock_guard<std::mutex> lock(chatMutex_);
+     {
+        std::lock_guard<std::mutex> lock(chatMutex_);
+        chatMode_ = ChatMode::Group;
+        currentChatId_ = groupid;
+    }
 
-    chatMode_ = ChatMode::Group;
-    currentChatId_ = groupid;
+    Message msg;
+    msg.setType(Messagetype::GroupChatRead);
+    msg.setReceiverId(0);
+    msg.payload()["groupId"] = groupid;
+
+    connection_->send(msg);
 }
 void Client::PrivateChatRead(uint32_t friendid)
 {
@@ -1797,4 +1813,12 @@ bool Client::waitDeleteAccountResult()
     std::unique_lock<std::mutex> lock(deleteAccountResultMutex_);
     waitDeleteAccountCv_.wait(lock, [this] { return deleteAccountFinished_;});
     return deleteAccountResult_;
+}
+
+std::vector<FileTransfer::DownloadProgress> Client::downloadProgressList()const{
+    if(!fileTransfer_)
+    {
+        return {};
+    }
+    return fileTransfer_->downloadProgressList();
 }

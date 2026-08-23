@@ -7,7 +7,7 @@
 #include "../../model/messagemodel.h"
 #include "../../model/offlinemodel.h"
 #include"../../session/sessionmanager.h"
-#include "../../model/offlinemodel.h"
+#include "offlineservice.h"
 #include <iostream>
 #include "../../model/usermodel.h"
 GroupService& GroupService::instance()
@@ -66,8 +66,14 @@ dispatcher.registerHandler(Messagetype::GroupJoinRequestList,[](const Message& m
 {
     GroupService::instance().removeGroupMember(message,session);
 });
+ dispatcher.registerHandler(Messagetype::GroupChatRead,[](const Message& message,Session* session)
+{
+    GroupService::instance().groupChatRead(message,session);
+});
+
 
 }
+
 void GroupService::createGroup(const Message& msg,Session*se)
 {
     if(!se)
@@ -324,23 +330,24 @@ void GroupService::groupChat(const Message& msg, Session* se)
    for(const auto& member:members)
    {
     int userid=member.userId();
-
+      if(userid == userId)
+        continue;
     auto session=SessionManager::instance().getSession(userid);
     if(session)
     {
         session->send(forward);
     }
-    else
-    {
+    
+    
     //只要是未读就记录
      OfflineMessage offline;
-    offline.setUserId(userid);
-    offline.setMessageId(chat.id());
-    offline.setType(OfflineType::ChatMessage);
-    offline.setCreateTime(std::chrono::system_clock::now());
+     offline.setUserId(userid);
+     offline.setMessageId(chat.id());
+     offline.setType(OfflineType::ChatMessage);
+     offline.setCreateTime(std::chrono::system_clock::now());
 
         offlineModel.insert(offline);
-    }
+    
    }
 
    Message ack;
@@ -724,4 +731,32 @@ void GroupService::removeGroupMember( const Message& msg, Session* se)
     reply.payload()["userId"] = targetUserId;
     reply.payload()["message"] = ok ? "已移除群成员" : "移除群成员失败";
     se->send(reply);
+}
+void GroupService::groupChatRead(const Message& msg, Session* se)
+{
+    if(se == nullptr || !se->authenticated())
+        return;
+
+    auto userSession = dynamic_cast<UserSession*>(se);
+    if(userSession == nullptr)
+        return;
+
+    int userId = userSession->userid();
+
+    const auto& payload = msg.payload();
+
+    if(!payload.contains("groupId"))
+        return;
+
+    int64_t groupId = payload.at("groupId").get<int64_t>();
+
+    GroupModel groupModel;
+
+    auto group = groupModel.findById(groupId);
+    if(!group)
+        return;
+    if(!groupModel.isGroupMember(groupId, userId))
+        return;
+
+   OfflineService::instance().sendGroupOfflineMessages(userId, groupId,se);
 }

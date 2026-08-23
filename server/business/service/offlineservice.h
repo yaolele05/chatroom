@@ -1,6 +1,7 @@
 #pragma once
 #include "../../session/usersession.h"
 #include "../../model/offlinemodel.h"
+#include <cstdint>
 class OfflineService
 {
     public:

@@ -203,7 +203,11 @@ void FileTransfer::handleFileChunk(const Message& msg)
          std::cout<< "[FileTransfer] receive task not found" << " fileId="<< fileId<< std::endl;
        return;
        }
-
+             
+       std::vector<unsigned char>bytes;
+         uint64_t received = 0;
+    {
+       std::lock_guard<std::mutex> lock(statemutex_);
        auto& task=it->second;
          
        uint64_t offset =msg.payload().value("offset",task.received);
@@ -217,9 +221,9 @@ void FileTransfer::handleFileChunk(const Message& msg)
      if(offset + size > task.filesize) { std::cout << "[FileTransfer] file size overflow" << " offset=" << offset << " size=" << size << " filesize=" << task.filesize << std::endl; return; }
        //base64
        std::string encoded=msg.payload()["data"].get<std::string>();
+       bytes=Base64::decode(encoded);
      //  std::cout<< "[FileTransfer] handleFileChunk"<< " fileId=" << fileId<< " offset=" << offset<< " encodedSize=" << encoded.size()<< std::endl;
-       
-       std::vector<unsigned char>bytes=Base64::decode(encoded);
+ 
         if(bytes.empty() && !encoded.empty())
       {
         std::cout << "[FileTransfer] base64 decode failed\n";
@@ -227,7 +231,7 @@ void FileTransfer::handleFileChunk(const Message& msg)
       }
       if(bytes.size() != size)
     {
-       std::cout<< "[FileTransfer] chunk size mismatch"<< " expected=" << size<< " actual=" << bytes.size()<< std::endl;
+     //  std::cout<< "[FileTransfer] chunk size mismatch"<< " expected=" << size<< " actual=" << bytes.size()<< std::endl;
        return;
     }
        task.file.write(reinterpret_cast<const char*>(bytes.data()),bytes.size());
@@ -236,23 +240,33 @@ void FileTransfer::handleFileChunk(const Message& msg)
         std::cout<< "write file failed\n";
         return;
       }
-      
+     
        task.received +=bytes.size();
-       task.file.flush();
-      std::cout<< "[FileTransfer] receive chunk"<< " fileId=" << fileId<< " received=" << task.received<< "/" << task.filesize<< std::endl;
-      
+        task.file.flush();
+         received = task.received;
+    }
        Message ack; 
        ack.setType(Messagetype::FILE_ACK);///接收客户端ack：：fileack
        ack.payload()["fileId"] = fileId; 
-       ack.payload()["offset"] = task.received; 
+       ack.payload()["offset"] = received; 
        ack.payload()["stage"] = "chunk";
        connection_->send(ack); 
-      std::cout << "[FileTransfer] send FILE_ACK" << " fileId=" << fileId << " offset=" << task.received << std::endl;
+     
 
 }
 void FileTransfer::handleFileFinish(const Message& msg)
 {
      uint64_t fileId = msg.payload()["fileId"];
+       std::string filepath;
+       std::string expectedSha256=msg.payload().value("sha256","");
+        if(expectedSha256.empty())
+     {
+       std::cout<< "[FileTransfer] missing sha256"<< std::endl;
+       return;
+     }
+
+   {
+      std::lock_guard<std::mutex> lock(statemutex_);
       auto it=receiveTasks_.find(fileId);
        if(it==receiveTasks_.end())
        {
@@ -268,32 +282,37 @@ void FileTransfer::handleFileFinish(const Message& msg)
        }
      task.file.flush();
       task.file.close();
-      std::string actualSha256=Sha256::file(task.filepath);
-      std::string expectedSha256=msg.payload().value("sha256","");
-      if(expectedSha256.empty())
-     {
-       std::cout<< "[FileTransfer] missing sha256"<< std::endl;
-       return;
-     }
+         filepath = task.filepath;
+
+      }
+
+      std::string actualSha256=Sha256::file(filepath);
+    
     if( actualSha256 != expectedSha256)
     {
        std::cout<< "[FileTransfer] sha256 verify failed"<< std::endl;
          return;
     }
     
+    {
+
+     std::lock_guard<std::mutex> lock(statemutex_);
       auto pendingIt =std::find_if(pendingReceiveFiles_.begin(),pendingReceiveFiles_.end(),[fileId](const PendingReceiveFile& file)
       {
         return file.fileId == fileId;
-      }
-    );
-
+      } );
+  
     if(pendingIt != pendingReceiveFiles_.end())
     {
     pendingReceiveFiles_.erase(pendingIt);
     }
-     
-   receiveTasks_.erase(it);
-    
+     auto it = receiveTasks_.find(fileId);
+
+        if (it != receiveTasks_.end())
+        {
+            receiveTasks_.erase(it);
+        }
+  }
 }
 void FileTransfer::handleAck(const Message& msg)
 {
@@ -336,7 +355,7 @@ void FileTransfer::handleAck(const Message& msg)
    
     if(hasPendingFile_)
     {
-         //std::cout<< "[FileTransfer] create SendTask"<< std::endl;
+        
         std::ifstream fin(pendingFile_.filename,std::ios::binary);
         if(!fin)
         {
@@ -363,7 +382,7 @@ void FileTransfer::handleAck(const Message& msg)
      sendTasks_.emplace(fileId,std::move(task));
      hasPendingFile_=false;
     
-    // std::cout<<"file create byserver"<<"fileId:"<<fileId<<std::endl;
+
      sendChunks(fileId,offset);
      return;
     }
@@ -390,7 +409,7 @@ void FileTransfer::handleAck(const Message& msg)
       task.confirmedOffset = offset;
       task.offset=offset;
 
-    std::cout<< "[FileTransfer] ACK"<< " fileId=" << fileId << " offset=" << offset<< "/"<< task.filesize<< std::endl;
+    
     sendChunks(fileId,task.offset);
 }
 void FileTransfer::handleResumeRequest(const Message& msg)
@@ -407,7 +426,7 @@ void FileTransfer::handleResumeRequest(const Message& msg)
     response.payload()["fileId"] = fileId;
     response.payload()["offset"] = it->second.confirmedOffset;
     connection_->send(response);
-    // std::cout<< "[FileTransfer] resume request"<< " fileId=" << fileId<< " confirmedOffset="<< it->second.confirmedOffset<< std::endl;
+    
 }
 void FileTransfer::handleResumeResponse(const Message& msg)
 {
@@ -416,8 +435,7 @@ void FileTransfer::handleResumeResponse(const Message& msg)
     auto it = sendTasks_.find(fileId);
     if(it == sendTasks_.end())
     {
-         std::cout<< "[FileTransfer] send task not found"<< " fileId=" << fileId<< std::endl;
-        return;
+           return;
     }
     SendTask& task = it->second;
      task.waitingAck = false;
@@ -436,6 +454,7 @@ void FileTransfer::requestDownload(int64_t fileId)
  }
  bool FileTransfer::createReceiveTask(uint64_t fileId,const std::string& filename,uint64_t filesize,const std::string& sha256)
 {
+  
   std::filesystem::create_directories(saveDirectory_);
     ReceiveTask task;
     task.fileId = fileId;
@@ -460,12 +479,12 @@ void FileTransfer::requestDownload(int64_t fileId)
     task.file.open(task.filepath, std::ios::binary | std::ios::out | std::ios::trunc);
     if(!task.file)
     {
-        std::cout<< "[FileTransfer] create file failed "<< task.filepath<< std::endl;
-
+   
         return false;
     }
+    std::lock_guard<std::mutex> lock(statemutex_);
     receiveTasks_.emplace(fileId,std::move(task));
-    std::cout<< "[FileTransfer] create receive task"<< " fileId=" << fileId<< " filename=" << filename<< " filesize=" << filesize<< std::endl;
+
     return true;
 }
 void FileTransfer::handleOfflineFileNotify(const Message& msg)//处理接收文件
@@ -474,7 +493,7 @@ void FileTransfer::handleOfflineFileNotify(const Message& msg)//处理接收文�
     const auto& payload=msg.payload();
     if(!payload.contains("fileId")||!payload.contains("fileName")|| !payload.contains("fileSize"))
     {
-      std::cout <<"[FileTransfer] invilid file notify"<<std::endl;
+      
       return;
     }
     PendingReceiveFile file;
@@ -488,17 +507,22 @@ void FileTransfer::handleOfflineFileNotify(const Message& msg)//处理接收文�
     file.accepted=false;
 
     
-
+    std::lock_guard<std::mutex> lock(statemutex_);
     pendingReceiveFiles_.push_back(file);
-    //std::cout << "[FileTransfer] notify"<< " fileId=" << file.fileId<< " groupId=" << file.groupId<< " filename=" << file.filename << std::endl;
+   
   }
-  const std::vector<FileTransfer::PendingReceiveFile>&FileTransfer::pendingReceiveFiles() const
+  std::vector<FileTransfer::PendingReceiveFile> FileTransfer::pendingReceiveFiles() 
 {
+  std::lock_guard<std::mutex> lock (statemutex_);
     return pendingReceiveFiles_;
 }
 
-void FileTransfer::acceptFile(int64_t fileId)
+bool FileTransfer::acceptFile(int64_t fileId)
 {
+  PendingReceiveFile target;
+  {
+    std::lock_guard<std::mutex> lock(statemutex_);
+  
     for( auto& file : pendingReceiveFiles_)
     {
       if(file.fileId != static_cast<uint64_t>(fileId))
@@ -506,19 +530,51 @@ void FileTransfer::acceptFile(int64_t fileId)
       
       if(file.accepted)
       {
-        std::cout<< "[FileTransfer] "<< "file already accepted" << std::endl;
-        return;
+     
+        return true;
       }
-      if(!createReceiveTask(file.fileId,file.filename,file.filesize,file.sha256))
-      {
-        std::cout << "[FileTransfer] "<< "create receive task failed"<< " fileId=" << file.fileId << std::endl;
-          return;
-      }
-
-       file.accepted = true;
-      requestDownload(fileId);
-     std::cout<< "[FileTransfer] "<< "accept file"<< " fileId=" << fileId<< std::endl;
-            return;
+          target=file;
+          break;
     }
-    std::cout<< "[FileTransfer] "<< "pending file not found" << " fileId=" << fileId << std::endl;
+  }
+    if(target.fileId==0)
+    {
+      return false;
+    }
+      if(!createReceiveTask(target.fileId,target.filename,target.filesize,target.sha256))
+      {
+     
+          return false;
+      }
+      
+      {
+        std::lock_guard<std::mutex> lock(statemutex_);
+           for( auto& file : pendingReceiveFiles_)
+        {
+         if(file.fileId == static_cast<uint64_t>(fileId))
+          {
+            file.accepted = true;  
+            break;
+          }
+        }
+      }
+     requestDownload(fileId);
+           return true;
+}
+std::vector<FileTransfer::DownloadProgress> FileTransfer::downloadProgressList() 
+{
+
+   std::lock_guard<std::mutex> lock(statemutex_);
+   std::vector<DownloadProgress>result;
+   result.reserve(receiveTasks_.size());
+   for(auto& [fileId,task]:receiveTasks_)
+   {
+    DownloadProgress progress;
+    progress.filename=task.filename;
+    progress.received=task.received;
+    progress.total=task.filesize;
+     result.push_back(progress);
+
+   }
+   return result;
 }

@@ -125,7 +125,9 @@ enum class Messagetype : uint16_t
     GroupJoinRequestNotify,
    
     PrivateUnreadNotify,
-    GroupUnreadNotify
+    GroupUnreadNotify,
+
+    GroupChatRead
 
 
 };

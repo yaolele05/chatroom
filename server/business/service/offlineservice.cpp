@@ -196,6 +196,10 @@ void OfflineService::sendGroupOffline(const OfflineMessage& offline,Session* se)
      auto message=model.findById(offline.messageId());
    if(!message)
    return;
+
+   UserModel userModel;
+    auto user = userModel.findById(message->sendId());
+
       Message reply;
    reply.setType(Messagetype::GroupChat);
    reply.setSenderId(message->sendId());
@@ -205,7 +209,9 @@ void OfflineService::sendGroupOffline(const OfflineMessage& offline,Session* se)
    reply.payload()["groupId"]=message->groupId();
    reply.payload()["content"]=message->content();
     reply.payload()["offline"] = true;
-    reply.payload()["senderName"] ="用户" + std::to_string(message->sendId());
+   
+    reply.payload()["senderName"] = user->username();
+    
    se->send(reply);
 
 }

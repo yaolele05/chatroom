@@ -107,6 +107,9 @@ case Messagetype::DeleteAccountResponse:
     return "privateunread_notify";
     case Messagetype::GroupUnreadNotify:
     return "groupunread_notify";
+    case Messagetype::GroupChatRead:
+    return "groupchat_read";
+    
     default: return"unknown";
     }
 }
@@ -293,6 +296,8 @@ Messagetype JsonCodec::StringToType(const std::string& type)
         return Messagetype::PrivateUnreadNotify;
         if(type=="groupunread_notify")
         return Messagetype::GroupUnreadNotify;
+        if(type=="groupchat_read")
+        return Messagetype::GroupChatRead;
    
     return Messagetype::unknown;
 }

@@ -26,6 +26,7 @@ void groupJoinRequestMenu(Client& client,int64_t groupid);
 void groupMemberMenu(Client& client,int64_t groupId);
 void groupJoinRequestMenu(Client& client,int64_t groupId);
 void groupMemberActionMenu(Client& client,int64_t groupId,int64_t userId,const std::string& username);
+void showDownloadProgress(Client& client);
 #include <iomanip>
 #include <sstream>
 
@@ -269,6 +270,25 @@ void loginMenu(Client& client)
 
     }
 }
+void showDownloadProgress(Client& client)
+{
+    auto progress = client.downloadProgressList();
+    std::cout << "\n========== 下载任务 ==========\n";
+    if(progress.empty())
+    {
+        std::cout << "当前没有正在下载的文件\n";
+        return;
+    }
+    for(const auto& p : progress)
+    {
+        double percent = 0.0;
+        if(p.total > 0)
+        {
+            percent = static_cast<double>(p.received) * 100.0/ static_cast<double>(p.total);
+        }
+        std::cout<< p.filename << "\n" << "  "<< formatFileSize(p.received)<< " / "<< formatFileSize(p.total) << " "<< std::fixed<< std::setprecision(2) << percent<< "%\n";
+    }
+}
 void chatMenu(Client& client)
 {
     while(client.isLogin())
@@ -285,7 +305,7 @@ void chatMenu(Client& client)
 7.退群
 8.好友申请列表
 9.注销
-
+10.下载任务
 0.退出
 
 ==========================
@@ -446,6 +466,11 @@ void chatMenu(Client& client)
     break;
     }
        
+     case 10:
+    {
+        showDownloadProgress(client);
+        break;
+    }
            case 0:
            {
             client.logout();
@@ -767,7 +792,7 @@ void receiveFriendFileMenu(Client& client,int friendid)
     }
     while(true)
     {
-        const auto& files = client.pendingReceiveFiles();
+         auto files = client.pendingReceiveFiles();
         std::cout << "\n========== 待接收文件 ==========\n";
         std::vector<int64_t> fileIds;
         int index = 1;
@@ -817,7 +842,7 @@ void receiveGroupFileMenu(Client& client,int groupid)
 {
     while(true)
     {
-        const auto& files = client.pendingReceiveFiles();
+         auto files = client.pendingReceiveFiles();
         std::cout << "\n========== 待接收文件 ==========\n";
         std::vector<int64_t> fileIds;
         int index = 1;
@@ -857,6 +882,7 @@ void receiveGroupFileMenu(Client& client,int groupid)
         receiveFileActionMenu(client,fileId);
     }
 }
+
 void receiveFileActionMenu(Client& client,int64_t fileId)
 {
     while(true)
@@ -878,9 +904,15 @@ void receiveFileActionMenu(Client& client,int64_t fileId)
         switch(op)
         {
         case 1:
+        {  
+        if (!client.acceptFile(fileId))
         {
-            client.acceptFile(fileId);
-            return;
+        std::cout << "接收文件失败\n";
+         std::cout << "已开始接收文件\n";
+    
+        return;
+        }
+        break;
         }
         case 2:
         {

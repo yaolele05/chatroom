@@ -5,6 +5,8 @@
 #include "clientconnection.h"
 #include <vector>
 #include <cstdlib>
+#include <mutex>
+#include <unordered_map>
 class FileTransfer
 {
     public:
@@ -59,6 +61,14 @@ class FileTransfer
     bool accepted{false};
 
   };
+  struct DownloadProgress
+  {
+   uint64_t fileId{0};
+   std::string filename;
+   uint64_t received{0};
+   uint64_t total{0};
+
+  };
     explicit FileTransfer(std::shared_ptr<ClientConnection>conn);
     bool sendPrivateFile(uint32_t userId,const std::string& filename);
     bool sendGroupFile(uint32_t groupId,const std::string& filename);
@@ -71,9 +81,10 @@ class FileTransfer
     void handleResumeResponse(const Message&msg);
     void requestDownload(int64_t fileId);
     bool createReceiveTask(uint64_t fileId,const std::string& filename,uint64_t filesize,const std::string& sha256);
-    const std::vector<PendingReceiveFile>&pendingReceiveFiles() const;
-    void acceptFile(int64_t fileId);
+     std::vector<PendingReceiveFile> pendingReceiveFiles() ;
+    bool acceptFile(int64_t fileId);
     void handleOfflineFileNotify(const Message& msg);
+    std::vector<DownloadProgress> downloadProgressList();
   
     private:
      
@@ -84,4 +95,5 @@ class FileTransfer
     PendingFile pendingFile_;
     bool hasPendingFile_{false};
     std::vector<PendingReceiveFile> pendingReceiveFiles_;
+    std::mutex statemutex_;
 };
