@@ -112,7 +112,6 @@ void ChatService::PrivateChat(const Message& message,Session* session)
     
    }
  
-   session->send(reply);
 
    Message ack;
    ack.setType(Messagetype::MessageAck);

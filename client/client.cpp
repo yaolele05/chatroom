@@ -312,8 +312,9 @@ void Client::privateChat(uint32_t receiverId,const std::string& text)
     auto& payload=msg.payload();
     payload["content"]=text;
     connection_->send(msg);
+      printChatMessage(userId_, userId_, "我", text);
 }
-void Client::createGroup(const std::string& groupName,const std::string&description)
+void Client::createGroup(const std::string& groupName,const std::string&description,uint32_t friendId)
 {
     Message msg;
     msg.setType(Messagetype::CreateGroup);
@@ -322,6 +323,7 @@ void Client::createGroup(const std::string& groupName,const std::string&descript
     msg.setTimestamp(time(nullptr));
     msg.payload()["groupName"]=groupName;
     msg.payload()["description"]=description;
+    msg.payload()["friendId"]=friendId;
     connection_->send(msg);
 }
 void Client::joinGroup(uint32_t groupId)
@@ -356,6 +358,7 @@ void Client::groupChat(uint32_t groupId,const std::string& text)
     payload["groupId"]=groupId;
     payload["content"]=text;
     connection_->send(msg);
+    printChatMessage(userId_, userId_, "我", text); 
 }
 void Client::sendPrivateFile(uint32_t userId,const std::string& filename)
 {
@@ -811,6 +814,21 @@ void Client::onMessage(const Message& msg)
     }
     break;
    }
+   case Messagetype::DisbandGroupResponse:
+     {
+      const auto& payload = msg.payload();
+      int code = payload.value("code", -1);
+      if(code == 0)
+      {
+          std::cout << "群聊已解散\n";
+      }
+      else
+      {
+          std::cout << "解散群聊失败：" << payload.value("message", "") << '\n';
+      }
+      break;
+     }
+
    case Messagetype::DeleteAccountResponse:
    {
     bool success = false;
@@ -837,6 +855,15 @@ void Client::onMessage(const Message& msg)
          printNotification(payload.value("message", "收到一条新的入群申请"));
     break;
     }
+        case Messagetype::GroupMemberLeaveNotify:
+      {
+          auto & payload = msg.payload();
+          std::string leaver = payload.value("leaverName", "有成员");
+          std::string groupname = payload.value("groupName", "");
+          printNotification(leaver + " 退出了群聊 " + groupname);
+          break;
+      }
+
     case Messagetype::FriendRequestNotify:
     {
         auto & payload=msg.payload();
@@ -1767,6 +1794,21 @@ void Client::removeGroupMember(int64_t groupId,int userId)
     msg.payload()["userId"] = userId;
     connection_->send(msg);
 }
+  void Client::disbandGroup(int64_t groupId)
+  {
+      if(!connection_ || !login_)
+      {
+          return;
+      }
+      Message msg;
+      msg.setType(Messagetype::DisbandGroup);
+      msg.setSequence(sequence_++);
+      msg.setSenderId(userId_);
+      msg.setTimestamp(time(nullptr));
+      msg.payload()["groupId"] = groupId;
+      connection_->send(msg);
+  }
+
 bool Client::waitGroupMemberList()
 {
     std::unique_lock<std::mutex> lock(groupMemberMutex_);

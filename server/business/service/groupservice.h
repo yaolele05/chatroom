@@ -22,6 +22,7 @@ class GroupService
      void setGroupRole(const Message& msg,Session* se);
     void groupMemberList(const Message& msg,Session* se);
     void removeGroupMember(const Message& msg, Session* se);
+      void disbandGroup(const Message& msg, Session* se);  
     private:
     GroupService()=default;
 };

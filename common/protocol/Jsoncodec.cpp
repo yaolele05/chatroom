@@ -109,6 +109,13 @@ case Messagetype::DeleteAccountResponse:
     return "groupunread_notify";
     case Messagetype::GroupChatRead:
     return "groupchat_read";
+    case Messagetype::DisbandGroup:
+    return "disband_group";
+    case Messagetype::DisbandGroupResponse:
+    return "disbandgroup_response";
+    case Messagetype::GroupMemberLeaveNotify:
+      return "groupmember_leave_notify";
+
     
     default: return"unknown";
     }
@@ -298,6 +305,13 @@ Messagetype JsonCodec::StringToType(const std::string& type)
         return Messagetype::GroupUnreadNotify;
         if(type=="groupchat_read")
         return Messagetype::GroupChatRead;
+        if(type=="disband_group")
+        return Messagetype::DisbandGroup;
+        if(type=="disbandgroup_response")
+        return Messagetype::DisbandGroupResponse;
+         if(type=="groupmember_leave_notify")
+          return Messagetype::GroupMemberLeaveNotify;
+
    
     return Messagetype::unknown;
 }

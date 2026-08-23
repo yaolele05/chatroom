@@ -29,7 +29,27 @@ void groupMemberActionMenu(Client& client,int64_t groupId,int64_t userId,const s
 void showDownloadProgress(Client& client);
 #include <iomanip>
 #include <sstream>
+  #include <termios.h>//回显
+  #include <unistd.h>//终端回显
 
+class EchoGuard
+{
+    public:
+    EchoGuard()
+    {
+        struct termios t;
+        tcgetattr(STDIN_FILENO,&old_);
+        t=old_;
+        t.c_lflag &= ~ECHO; // 只关回显,保留行缓冲(仍需按回车)
+        tcsetattr(STDIN_FILENO,TCSANOW,&t);
+    }
+    ~EchoGuard()
+    {
+        tcsetattr(STDIN_FILENO,TCSANOW,&old_);
+    }
+    private:
+    termios old_{};
+};
 std::string formatFileSize(uint64_t size)
 {
     const double KB = 1024.0;
@@ -383,9 +403,42 @@ void chatMenu(Client& client)
              std::cin>>groupName;
             std::cout<<"请输入要创建群的群介绍：";
              std::cin>>description;
-            client.createGroup(groupName, description);
-            break;
-           }
+            
+             client.friendList();                 // 显示好友列表
+           client.waitFriendList();
+          uint32_t friendId;
+        std::cout<<"选择一起创建群聊的好友ID：";
+        if(!(std::cin>>friendId))
+       {
+          std::cin.clear();
+          std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+          std::cout<<"输入错误\n";
+          break;
+       }
+         const auto& friends=client.friends();
+      std::string friendname;
+      bool found=false;
+        for(const auto& f:friends)
+        {
+          if(f.value("id",0)==friendId)
+          {
+              friendname=f.value("nickname","");
+              if(friendname.empty()) friendname=f.value("username","");
+              found=true;
+              break;
+          }
+      }
+      if(!found)
+      {
+          std::cout<<"好友ID不存在,创建失败\n";
+          break;
+      }
+
+       std::cout<<"和 "<<friendname<<" 创建群聊\n";
+       client.createGroup(groupName, description, friendId);
+      break;
+
+      }
 
            case 6:
            {
@@ -617,7 +670,7 @@ void privateChatLoop(Client& client,int friendid,const std::string& friendname)
     client.enterPrivateChat(friendid,friendname);
 
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-
+     EchoGuard echoOff; 
     std::cout << "\n========================================\n";
     std::cout << "与 " << friendname << " 聊天\n";
     std::cout << "输入 /quit 退出聊天\n";
@@ -664,7 +717,7 @@ void groupMenu(Client& client)
     {
        if(g.value("groupId",0)==gid)
        {
-        groupname=g.value("groupname","");
+        groupname=g.value("name","");
         found=true;
         break;
        }
@@ -762,7 +815,7 @@ void groupChatLoop(Client& client, int groupid, const std::string& groupname)
 
     client.enterGroupChat(groupid);
     std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
+    EchoGuard echoOff; 
     std::cout << "\n========================================\n";
     std::cout << "进入群聊：" << groupname << "\n";
     std::cout << "输入 /quit 退出群聊\n";
@@ -1086,7 +1139,8 @@ void groupManageMenu(Client& client,int groupid,const std::string& groupname)
 
         std::cout << "1. 查看加群申请\n";
         std::cout << "2. 查看群成员\n";
-      
+        std::cout << "3. 解散群聊\n";
+
         std::cout << "0. 返回\n";
 
         int op;
@@ -1114,6 +1168,12 @@ void groupManageMenu(Client& client,int groupid,const std::string& groupname)
                groupMemberMenu(client,groupid);
                 break;
             }
+             case 3:
+              {
+                  client.disbandGroup(groupid);
+                  return;    
+              }
+
             case 0:
             {
                 return;

@@ -51,7 +51,7 @@ class Client
     void deleteFriend(uint32_t friendId);
      void friendList();
     void privateChat(uint32_t userId,const std::string& text);
-    void createGroup(const std::string& groupName,const std::string& description);
+    void createGroup(const std::string& groupName,const std::string& description,uint32_t friendId);
     void joinGroup(uint32_t groupId);
     void leaveGroup(uint32_t groupId);
     void groupChat(uint32_t groupId,const std::string& text);
@@ -116,6 +116,7 @@ class Client
    void rejectGroupJoinRequest(int64_t requestId);
    void setGroupMemberRole(int64_t groupId,int userId,GroupRole role);
    void removeGroupMember(int64_t groupId,int userId);
+     void disbandGroup(int64_t groupId);    
 
    bool waitGroupMemberList();
    bool waitGroupJoinRequestList();

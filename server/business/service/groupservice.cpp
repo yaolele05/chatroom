@@ -22,6 +22,7 @@ void GroupService::rigisterHandler()
 {
     GroupService::instance().createGroup(message,session);
 });
+
    dispatcher.registerHandler(Messagetype::JoinGroup,[](const Message& message,Session* session)
 {
     GroupService::instance().joinGroup(message,session);
@@ -70,7 +71,10 @@ dispatcher.registerHandler(Messagetype::GroupJoinRequestList,[](const Message& m
 {
     GroupService::instance().groupChatRead(message,session);
 });
-
+ dispatcher.registerHandler(Messagetype::DisbandGroup,[](const Message&message,Session* session)
+  {
+      GroupService::instance().disbandGroup(message,session);
+  });
 
 }
 
@@ -90,6 +94,8 @@ void GroupService::createGroup(const Message& msg,Session*se)
     return;
     if(!payload.contains("description"))
     return;
+    if(!payload.contains("friendId"))  return; 
+     int friendId = payload.at("friendId").get<int>();
 
     Group group;
     group.setOwnerId(userId);
@@ -102,6 +108,13 @@ void GroupService::createGroup(const Message& msg,Session*se)
     if(!ok)
     return;
      
+     GroupMember member;                                 
+      member.setGroupId(group.id());
+      member.setUserId(friendId);
+      member.setRole(GroupRole::Member);
+      member.setCreateTime(std::chrono::system_clock::now());
+      model.addGroupMember(member);
+
      Message reply;
 
      reply.setSenderId(0);
@@ -243,12 +256,36 @@ void GroupService::leaveGroup(const Message& msg, Session* se)
     if(ok)
    {
     auto members = model.findGroupMembers(groupId);
+     auto group = model.findById(groupId);
+      Message notice;
+      notice.setType(Messagetype::GroupMemberLeaveNotify);
+      notice.setSequence(0);
+      notice.setReceiverId(0);
+      notice.payload()["groupId"] = groupId;
+      notice.payload()["groupName"] = group ? group->name() : "";
+      notice.payload()["leaverName"] = userSession->username();
+   
+         for(const auto& member : members)
+      {
+          auto role = member.role();
+          if(role == GroupRole::Owner || role == GroupRole::Admin)
+          {
+              auto tar = SessionManager::instance().getSession(member.userId());
+              if(tar)
+              {
+                  tar->send(notice);
+              }
+          }
+      }
 
-    if(members.empty())
-    {
-        model.removeGroup(groupId);
+      if(members.empty())
+      {
+          model.removeGroup(groupId);
+      }
+
+   
     }
-    }
+
     reply.payload()["code"] = ok ? 0 : -1;
     reply.payload()["groupId"] = groupId;
     reply.payload()["message"] = ok ? "success" : "failed";
@@ -330,14 +367,17 @@ void GroupService::groupChat(const Message& msg, Session* se)
    for(const auto& member:members)
    {
     int userid=member.userId();
-      if(userid == userId)
+      
+     if(userid == userId)
         continue;
+        
     auto session=SessionManager::instance().getSession(userid);
     if(session)
     {
         session->send(forward);
     }
     
+   
     
     //只要是未读就记录
      OfflineMessage offline;
@@ -732,31 +772,69 @@ void GroupService::removeGroupMember( const Message& msg, Session* se)
     reply.payload()["message"] = ok ? "已移除群成员" : "移除群成员失败";
     se->send(reply);
 }
+  void GroupService::disbandGroup(const Message& msg, Session* se)
+  {
+      if(!se || !se->authenticated())
+          return;
+
+      auto userSession = dynamic_cast<UserSession*>(se);
+      if(!userSession)
+          return;
+
+      int operatorId = userSession->userid();
+      const auto& payload = msg.payload();
+      if(!payload.contains("groupId"))
+          return;
+      std::int64_t groupId = payload.at("groupId").get<std::int64_t>();
+
+      Message reply;
+      reply.setType(Messagetype::DisbandGroupResponse);
+      reply.setSequence(msg.sequence());
+      reply.setReceiverId(operatorId);
+
+      GroupModel model;
+      auto group = model.findById(groupId);
+      if(!group)
+      {
+          reply.payload()["code"] = -1;
+          reply.payload()["message"] = "群不存在";
+          se->send(reply);
+          return;
+      }
+      if(model.getGroupMemberRole(groupId, operatorId) != GroupRole::Owner)
+      {
+          reply.payload()["code"] = -1;
+          reply.payload()["message"] = "只有群主可以解散群聊";
+          se->send(reply);
+          return;
+      }
+      bool ok = model.removeGroup(groupId);
+      reply.payload()["code"] = ok ? 0 : -1;
+      reply.payload()["groupId"] = groupId;
+      reply.payload()["message"] = ok ? "群聊已解散" : "解散群聊失败";
+      se->send(reply);
+  }
+
+
 void GroupService::groupChatRead(const Message& msg, Session* se)
 {
     if(se == nullptr || !se->authenticated())
         return;
-
     auto userSession = dynamic_cast<UserSession*>(se);
     if(userSession == nullptr)
         return;
-
     int userId = userSession->userid();
 
     const auto& payload = msg.payload();
 
     if(!payload.contains("groupId"))
         return;
-
     int64_t groupId = payload.at("groupId").get<int64_t>();
-
     GroupModel groupModel;
-
     auto group = groupModel.findById(groupId);
     if(!group)
         return;
     if(!groupModel.isGroupMember(groupId, userId))
         return;
-
    OfflineService::instance().sendGroupOfflineMessages(userId, groupId,se);
 }
