@@ -878,7 +878,17 @@ void Client::onMessage(const Message& msg)
        int unreadc=payload.value("unreadCount",0);
        if(unreadc<=0)
        break;
-
+        ChatMode mode;                                                     
+      uint32_t chatId;                                                   
+     {                                                                  
+         std::lock_guard<std::mutex> lock(chatMutex_);                  
+          mode = chatMode_;                                              
+         chatId = currentChatId_;                                       
+     }                                                                  
+    if(mode == ChatMode::Private && chatId == friendid)                
+        break;      
+        
+        
          std::cout << "\n[通知] 你有 " << unreadc << " 条来自用户 "<< username  << " 的未读消息\n";
          break;
     }
