@@ -39,7 +39,6 @@ ChatRoom 是一个基于 C++17 开发的客户端/服务器聊天室系统。
 * 文件断点续传
 * SHA-256 文件校验
 * Base64 编解码
-* SSL/TLS 支持
 * MySQL 数据持久化
 * Redis 缓存及状态管理
 * 邮件验证码
@@ -502,7 +501,7 @@ server.key
 要
 `sudo apt update
 sudo apt install build-essential cmake
-sudo apt install libssl-dev libcurl4-openssl-dev libmysqlclient-dev libhiredis-dev
+sudo apt install libssl-dev libcurl4-openssl-dev  libmysqlclient-dev libhiredis-dev
 sudo apt install nlohmann-json3-dev`
 
 ## 进入项目根目录：

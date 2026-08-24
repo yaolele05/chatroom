@@ -154,7 +154,7 @@ class Client
     void handleHistory(const Message& msg);
     void handlerequestDownload(int64_t fileId);
     void handleOfflineFileNotify(const Message& msg);
-   
+      void onConnectionClosed(); 
    private:
    EventLoop* loop_;
 
@@ -225,5 +225,7 @@ class Client
      std::condition_variable waitDeleteAccountCv_;
      bool deleteAccountFinished_ = false;
     bool deleteAccountResult_ = false;
+
+     bool disconnecting_{false}; 
    
 };

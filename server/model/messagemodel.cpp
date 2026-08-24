@@ -92,6 +92,7 @@ std::vector<ChatMessage> MessageModel::findPriHistory(int userid, int peerid,siz
         return {};
     }
      std::vector<ChatMessage> messages;
+     
      {
     auto stmt=conn->prepared("SELECT "  "id,"  "sender_id,"  "receiver_id,"   "group_id,"
         "type,"    "content,"   "create_time "
@@ -113,7 +114,6 @@ std::vector<ChatMessage> MessageModel::findPriHistory(int userid, int peerid,siz
     stmt->bind(5,static_cast<int>(offset));
 
     auto result=stmt->query();
-    std::vector<ChatMessage> messages;
     while(result.fetch())
     {
         auto message=makeMessage(result);

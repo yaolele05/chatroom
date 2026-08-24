@@ -81,6 +81,7 @@ bool Client::connect(const std::string& ip, uint16_t port)
         return false;
     }
     connection_->setMessageCallback(std::bind(&Client::onMessage,this,std::placeholders::_1));
+    connection_->setCloseCallback([this]() { onConnectionClosed(); });
     fileTransfer_ =std::make_unique<FileTransfer>(connection_);
     return true;
 }
@@ -428,14 +429,25 @@ void Client::groupList()
 }
 void Client::disconnect()
 {
+    disconnecting_ = true;        // 主动退出，不打印"服务器已关闭"
+
     if(tcpClient_)
     {
         tcpClient_->disconnect();
     }
+    disconnecting_ = false;
     login_=false;
      userId_=0;
     username_.clear();
 }
+void Client::onConnectionClosed()
+  {
+      if (disconnecting_) return;
+      login_ = false;               // 让 chatMenu 的 while(client.isLogin()) 退出
+
+      std::cout << "\n[提示] 服务器已关闭连接\n" << std::endl;
+  }
+
 void Client::quit()
 {
     loop_->quit();

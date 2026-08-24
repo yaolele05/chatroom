@@ -87,7 +87,12 @@ void EpollPoller::updateChannel(Channel* channel)
 }
 void EpollPoller::removeChannel(Channel* channel)
 {
+
     int fd=channel->fd();
+    if(!channel->inEpoll())
+    {
+        return;
+    }
     if(::epoll_ctl(epfd_,EPOLL_CTL_DEL,fd,nullptr)<0)
     {
         perror("epoll_ctl del");

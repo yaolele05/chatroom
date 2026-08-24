@@ -12,6 +12,7 @@ class ClientConnection:public std::enable_shared_from_this<ClientConnection>
     public:
 
     using MessageCallback=std::function<void(const Message&)>;
+    using CloseCallback = std::function<void()>; 
     ClientConnection(EventLoop* loop,int sockfd);
 
     ~ClientConnection();
@@ -19,6 +20,7 @@ class ClientConnection:public std::enable_shared_from_this<ClientConnection>
     void send(const Message& message, const void*body, size_t len);
     void close();
     void setMessageCallback(MessageCallback cb);
+    void setCloseCallback(CloseCallback cb);  
     void connectEstablished();
     void connectDestroyed();
     bool connected() const
@@ -39,6 +41,7 @@ class ClientConnection:public std::enable_shared_from_this<ClientConnection>
     std::unique_ptr<Buffer> inputBuffer_;
     std::unique_ptr<Buffer> outputBuffer_;
     MessageCallback messageCallback_;
+     CloseCallback closeCallback_;  
     bool connected_{false};
 
 };

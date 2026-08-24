@@ -125,7 +125,19 @@ std::string formatFileSize(uint64_t size)
     }
     return oss.str();
 }
-
+std::string readPassword()                                    
+{                                                             
+    termios oldt;                                             
+   tcgetattr(STDIN_FILENO, &oldt);                           
+   termios newt = oldt;                                      
+   newt.c_lflag &= ~ECHO;                     // 关闭回显    
+   tcsetattr(STDIN_FILENO, TCSANOW, &newt);                  
+   std::string password;                                     
+    std::cin >> password;                                     
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);   // 恢复回显    
+    std::cout << '\n';                                                                    
+   return   password;                                          
+ } 
 int main(int argc, char* argv[])
 {
 
@@ -194,7 +206,7 @@ void loginMenu(Client& client)
             std::cout<<"请输入用户名：";
             std::cin>>username;///记得加限制字数
             std::cout<<"请输入密码：";
-            std::cin>>pwd;
+              pwd = readPassword();   
             
             client.loginByPassword(username,pwd);
             if(client.waitingLoginResult())
@@ -240,7 +252,7 @@ void loginMenu(Client& client)
                 std::cin >> username;
 
                 std::cout << "请输入密码：";
-                std::cin >> password;
+                  password = readPassword(); 
 
                 std::cout << "请输入邮箱：";
                 std::cin >> email;
@@ -298,7 +310,7 @@ void loginMenu(Client& client)
               std::cout<<"请输入验证码：";
               std::cin>>code;
               std::cout<<"请输入新密码：";
-              std::cin>>newpassword;
+              newpassword = readPassword(); 
               std::cout<<"请再次输入新密码:";
               std::cin>>conpassword;
               if(newpassword!=conpassword)

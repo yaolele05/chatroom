@@ -89,12 +89,17 @@ void ClientConnection::handleWrite()
         }
   }
 }
+ void ClientConnection::setCloseCallback(CloseCallback cb)
+{
+      closeCallback_ = std::move(cb);
+}
+
 void ClientConnection::handleClose()
 {
     connected_=false;
     channel_.disableAll();
     channel_.remove();
-    
+     if (closeCallback_) closeCallback_(); 
 }
 void ClientConnection::handleError()
 {
