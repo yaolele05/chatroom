@@ -17,9 +17,14 @@ void Session::send(const std::string& data)
         conn_->send(data);
     }
 }
+
 void Session::send(const Message& message)
 {
     send(PacketCodec::encode(JsonCodec::encode(message)));
+}
+void Session::send(const Message& message,const void* body,size_t len)
+{
+    send(PacketCodec::encode(JsonCodec::encode(message),body,len));
 }
 void Session::close()
 {

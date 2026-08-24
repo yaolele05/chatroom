@@ -27,8 +27,12 @@ void ClientConnection::setMessageCallback(MessageCallback cb)
 }
 void ClientConnection::send(const Message& msg)
 {
+     send(msg,nullptr,0);
+}
+void ClientConnection::send(const Message& msg,const void* body,size_t len)
+{
    std::string json=JsonCodec::encode(msg);
-   std::string packet=PacketCodec::encode(json);
+   std::string packet=PacketCodec::encode(json,body,len);
    if(loop_->isInLoopThread())
    {
     sendInLoop(packet);
@@ -130,7 +134,8 @@ void ClientConnection::handleRead()
         while(true)
         {
         std::string json;
-        PacketCodec::DecodeResult result=PacketCodec::decode(*inputBuffer_,json);
+        std::string body;
+        PacketCodec::DecodeResult result=PacketCodec::decode(*inputBuffer_,json,&body);
         switch(result)
         {
             case PacketCodec::DecodeResult::Ok:
@@ -139,9 +144,9 @@ void ClientConnection::handleRead()
                 {
 
                    Message message =JsonCodec::decode(json);
-                   {
+                    message.setBinary(std::move(body));
                     messageCallback_(message);
-                   }
+                   
                 }
                 catch(const std::exception& e)
                 {

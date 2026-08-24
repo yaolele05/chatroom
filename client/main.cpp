@@ -32,24 +32,6 @@ void showDownloadProgress(Client& client);
   #include <termios.h>//回显
   #include <unistd.h>//终端回显
 
-class EchoGuard
-{
-    public:
-    EchoGuard()
-    {
-        struct termios t;
-        tcgetattr(STDIN_FILENO,&old_);
-        t=old_;
-        t.c_lflag &= ~ECHO; // 只关回显,保留行缓冲(仍需按回车)
-        tcsetattr(STDIN_FILENO,TCSANOW,&t);
-    }
-    ~EchoGuard()
-    {
-        tcsetattr(STDIN_FILENO,TCSANOW,&old_);
-    }
-    private:
-    termios old_{};
-};
 std::string formatFileSize(uint64_t size)
 {
     const double KB = 1024.0;

@@ -168,8 +168,7 @@ void FileTransfer::sendChunks(uint64_t fileId,uint64_t offset)
             std::cout<<"[FileTransfer] read file failed"<<std::endl;
             return;
         }
-         std::vector<unsigned char> bytes(buffer.begin(),buffer.begin() + n);
-         std::string encoded=Base64::encode(bytes);
+    
 
           uint64_t chunkOffset = offset;
         Message chunk;
@@ -179,9 +178,9 @@ void FileTransfer::sendChunks(uint64_t fileId,uint64_t offset)
         chunk.payload()["fileId"]=task.fileId;
         chunk.payload()["offset"]=chunkOffset;
         chunk.payload()["size"]=static_cast<uint64_t>(n);
-        chunk.payload()["data"]=encoded;
+      
 
-        connection_->send(chunk);
+        connection_->send(chunk,buffer.data(),static_cast<size_t>(n));//yuanshi字节
           task.offset = chunkOffset + static_cast<uint64_t>(n);
         
         task.waitingAck=true;
@@ -204,7 +203,7 @@ void FileTransfer::handleFileChunk(const Message& msg)
        return;
        }
              
-       std::vector<unsigned char>bytes;
+     
          uint64_t received = 0;
     {
        std::lock_guard<std::mutex> lock(statemutex_);
@@ -219,21 +218,12 @@ void FileTransfer::handleFileChunk(const Message& msg)
 
       uint64_t size=msg.payload()["size"].get<uint64_t>();
      if(offset + size > task.filesize) { std::cout << "[FileTransfer] file size overflow" << " offset=" << offset << " size=" << size << " filesize=" << task.filesize << std::endl; return; }
-       //base64
-       std::string encoded=msg.payload()["data"].get<std::string>();
-       bytes=Base64::decode(encoded);
-     //  std::cout<< "[FileTransfer] handleFileChunk"<< " fileId=" << fileId<< " offset=" << offset<< " encodedSize=" << encoded.size()<< std::endl;
- 
-        if(bytes.empty() && !encoded.empty())
-      {
-        std::cout << "[FileTransfer] base64 decode failed\n";
-        return;
-      }
+      const std::string& bytes=msg.binary();
       if(bytes.size() != size)
-    {
-     //  std::cout<< "[FileTransfer] chunk size mismatch"<< " expected=" << size<< " actual=" << bytes.size()<< std::endl;
+     {
+     std::cout<<"chunk size mismatch\n";
        return;
-    }
+     }
        task.file.write(reinterpret_cast<const char*>(bytes.data()),bytes.size());
         if(!task.file)
       {

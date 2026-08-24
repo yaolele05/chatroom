@@ -1,5 +1,5 @@
 #include "message.h"
-
+#include <string>
 Message::Message(): type_(Messagetype::unknown),sequence_(0),senderId_(0), receiverId_(0), timestamp_(0),payload_(nlohmann::json::object())
 {
 }
@@ -59,4 +59,16 @@ const nlohmann::json& Message:: payload() const
 nlohmann::json& Message::payload() 
 {
    return payload_;
+}
+const std::string& Message::binary() const
+{
+    return binary_;
+}
+void Message::setBinary(const std::string& data)
+{
+    binary_=data;
+}
+void Message::setBinary( std::string&& data)
+{
+    binary_=std::move(data);
 }

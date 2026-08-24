@@ -7,7 +7,6 @@
 #include <fstream>
 #include"../../../common/protocol/message.h"
 #include "../../session/sessionmanager.h"
-#include"../../../common/security/crypto/base64.h"
 #include "../../../common/security/crypto/sha256.h"
 #include "../../model/offlinemodel.h"
 #include <iostream>
@@ -291,12 +290,12 @@ void FileService::fileChunk(const Message& msg,Session* se)
     return;
     if(!payload.contains("offset"))
     return;
-    if(!payload.contains("data"))
-    return;
+    
 
      std::int64_t fileId=payload.at("fileId").get<int64_t>();
      std::uint64_t offset=payload.at("offset").get<uint64_t>();
-     std::string data=payload.at("data").get<std::string>();
+    const std::string& data=msg.binary();
+
 
      auto it = receiveTasks_.find(fileId);
 
@@ -327,8 +326,7 @@ void FileService::fileChunk(const Message& msg,Session* se)
         reply.setSequence(msg.sequence());
 
         reply.payload()["code"] = -1;
-        reply.payload()["message"] =
-            "permission denied";
+        reply.payload()["message"] ="permission denied";
         se->send(reply);
         return;
     }
@@ -344,18 +342,20 @@ void FileService::fileChunk(const Message& msg,Session* se)
         se->send(reply);
         return;
     }
-    auto bytes = Base64::decode(data);
-    if(bytes.empty() && !data.empty())
+  
+    if(data.empty())
     {
         Message reply;
         reply.setType(Messagetype::Error);
-        reply.setSequence(msg.sequence());
+         reply.setSequence(msg.sequence());
         reply.payload()["code"] = -1;
-        reply.payload()["message"] = "base64 decode failed";
+        reply.payload()["message"] ="file offset chunk empty";
+          
         se->send(reply);
         return;
     }
-    if(task.offset + bytes.size() > task.file.fileSize())
+
+    if(task.offset + data.size() > task.file.fileSize())//溢出检查
     {
     Message reply;
     reply.setType(Messagetype::Error);
@@ -368,7 +368,7 @@ void FileService::fileChunk(const Message& msg,Session* se)
     return;
    }
 
-    task.stream.write(reinterpret_cast<const char*>(bytes.data()),static_cast<std::streamsize>(bytes.size()));
+    task.stream.write(data.data(),static_cast<std::streamsize>(data.size()));
     if(!task.stream)
     {
         Message reply;
@@ -379,7 +379,7 @@ void FileService::fileChunk(const Message& msg,Session* se)
         se->send(reply);
         return;
     }
-    task.offset += bytes.size();
+    task.offset += data.size();
     
     //std::cout<< "[FileService] write chunk"<< " fileId=" << fileId<< " offset=" << offset<< " bytes=" << bytes.size()<< " nextOffset=" << task.offset<< std::endl;
 
@@ -762,7 +762,6 @@ void FileService::sendNextChunk(SendTask& task)
 {
     if(!task.receiver)
     {
-   // std::cout<< "[FileService] receiver lost"<< std::endl;
     return;
     }
     if(task.finished)
@@ -771,7 +770,7 @@ void FileService::sendNextChunk(SendTask& task)
 
     if(!userSession)
     {
-       // std::cout<<"[FIleService receiver is not Usersession]"<<"fileid:"<<task.file.id()<<std::endl;
+      
         return;
     }
     int receiverId=userSession->userid();
@@ -813,8 +812,8 @@ void FileService::sendNextChunk(SendTask& task)
         std::cout<< "[FileService] read file failed";
         return;
     }
-    std::vector<unsigned char> bytes(buffer.begin(),buffer.begin() + n);
-    std::string encoded =Base64::encode(bytes);
+    
+   
 
     Message chunk;
     chunk.setType(Messagetype::FileChunk);
@@ -824,8 +823,8 @@ void FileService::sendNextChunk(SendTask& task)
     chunkPayload["fileId"] =task.file.id();
     chunkPayload["offset"] =task.offset;
     chunkPayload["size"] =static_cast<uint64_t>(n);
-    chunkPayload["data"] =encoded;
-    task.receiver->send(chunk);
+    
+    task.receiver->send(chunk,buffer.data(),static_cast<size_t>(n));
     task.waitingAck = true;
    // std::cout<< "[FileService] send chunk"<< " offset=" << task.offset<< "/" << task.file.fileSize()<< std::endl;
 }

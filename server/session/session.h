@@ -21,6 +21,7 @@ class Session
    }
     void send(const std::string& data);
    void send(const Message& msg);
+   void send(const Message& msg,const void*body,size_t len);
    void close();
    bool connected() const;
    const TcpConnectionptr& connection() const;///

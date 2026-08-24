@@ -16,6 +16,7 @@ class ClientConnection:public std::enable_shared_from_this<ClientConnection>
 
     ~ClientConnection();
     void send(const Message& message);
+    void send(const Message& message, const void*body, size_t len);
     void close();
     void setMessageCallback(MessageCallback cb);
     void connectEstablished();

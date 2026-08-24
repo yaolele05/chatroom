@@ -31,6 +31,10 @@ class Message
     nlohmann::json& payload();
 
     void setPayload(const nlohmann::json& payload);
+ const std::string& binary() const;
+  void setBinary(const std::string& data);
+  void setBinary(std::string&& data);//重载：读循环里我们 std::move(body)  进去，避免再拷贝一遍大数据。
+
 
 
     private:
@@ -43,5 +47,6 @@ class Message
     uint64_t timestamp_{0};
 
     nlohmann::json payload_;
+    std::string binary_;
 
 };

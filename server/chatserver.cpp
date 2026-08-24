@@ -55,9 +55,10 @@ void Chatserver::onMessage(const TcpConnectionptr& conn,Buffer* buffer)
 
     std::cout << "onMessage()" << std::endl;
     std::string json;
+    std::string body;
     while(true)
         {
-        auto result = PacketCodec::decode(*buffer,json);
+        auto result = PacketCodec::decode(*buffer,json,&body);
         if(result == PacketCodec::DecodeResult::Needmoredata)
         {
             break;
@@ -75,6 +76,7 @@ void Chatserver::onMessage(const TcpConnectionptr& conn,Buffer* buffer)
         {
            
             message = JsonCodec::decode(json);
+            message.setBinary(std::move(body));
 
         }
         catch(const std::exception& e)
