@@ -35,16 +35,24 @@ void Chatserver::onConnection(const TcpConnectionptr& conn)
     else
     {
         auto session=SessionManager::instance().getSession(conn.get());
-        if(session && session->userid() != 0)
+        if(session )
         {
-        auto redis =RedisPool::instance().getConnection();
-        if(redis)
-        {
-            redis->setUserOffline(session->userid());RedisPool::instance().releaseConnection(redis);
-        }
+           session->markDisconnected();
+            std::cout << "connection closed";
+            if(session->userid() != 0)
+            {
+                std::cout<< " userid=" << session->userid() << " heartbeat session retained"<< std::endl;
+                // 已登录用户：不删除，保留在 useridsessions_ 里，等 checkUsers() 60s 超时再清理
+
+            }
+            else
+            {
+                // 未登录的连接：直接完整清理
+                SessionManager::instance().removeSession(conn.get());
+            }
          }
 
-        SessionManager::instance().removeSession(conn.get());
+   
         std::cout<<"connection closed\n";
     }
 
@@ -90,12 +98,19 @@ void Chatserver::onMessage(const TcpConnectionptr& conn,Buffer* buffer)
             std::cerr<<"session not found\n";
             continue;
         }
+    if(message.type() == Messagetype::HeartBeat)
+     {
+    session->updateHeartbeat();
+     }
         bool ok =BusinessDispatcher::instance().dispatch(message,session.get());
 
+      
       if(!ok)
      {
        std::cout<<"no handler for message type="<<static_cast<int>(message.type())<<std::endl;
+       continue;
      }
+    
           
     }
 
@@ -109,14 +124,29 @@ void Chatserver::checkUsers()
         if(!session || !session->authenticated())
             continue;
       
-        if(session->heartbeatTimeout(std::chrono::seconds(60)))
+        if(!session->heartbeatTimeout(std::chrono::seconds(60)))
         {
-              auto conn = session->connection();
-               if(!conn)
-           {
-            continue;
-           }
+              continue;
         
         }
+      uint32_t userId = session->userid();
+        std::string username = session->username();
+
+        auto redis = RedisPool::instance().getConnection();
+
+        if(redis)
+        {
+            if(!redis->setUserOffline(userId))
+            {
+                std::cout << "[Heartbeat] set offline failed"<< std::endl;
+            }
+            RedisPool::instance().releaseConnection(redis);
+        }
+        SessionManager::instance().removeSession(session->connection().get());
+        auto conn = session->connection();
+        if(conn && session->connected())
+        {
+            conn->forceClose();
+        }        
     }
 }

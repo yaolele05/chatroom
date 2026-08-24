@@ -31,7 +31,67 @@ void showDownloadProgress(Client& client);
 #include <sstream>
   #include <termios.h>//回显
   #include <unistd.h>//终端回显
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <cwchar>
+#include <clocale>
+#include <string>
 
+int displayWidth(const std::string& text)
+{
+    int width = 0;
+
+    mbstate_t state{};
+
+    const char* p = text.data();
+    size_t remaining = text.size();
+
+    while (remaining > 0)
+    {
+        wchar_t wc;
+
+        size_t len = mbrtowc(&wc, p, remaining, &state);
+
+        if (len == static_cast<size_t>(-1) ||
+            len == static_cast<size_t>(-2))
+        {
+            // UTF-8 解析失败，按一个字符处理
+            ++width;
+            ++p;
+            --remaining;
+
+            state = mbstate_t{};
+            continue;
+        }
+
+        if (len == 0)
+            break;
+
+        int w = wcwidth(wc);
+
+        if (w > 0)
+            width += w;
+
+        p += len;
+        remaining -= len;
+    }
+
+    return width;
+}
+#include <sys/ioctl.h>
+#include <unistd.h>
+
+int getTerminalWidth()
+{
+    struct winsize ws{};
+
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1)
+    {
+        return 80; // 获取失败时默认 80 列
+    }
+
+    return ws.ws_col;
+}
 std::string formatFileSize(uint64_t size)
 {
     const double KB = 1024.0;
@@ -641,19 +701,49 @@ void friendactionMenu(Client& client,int friendid,const std::string& friendname)
     }
     return;
 }
- std::string readChatMessage()
+
+std::string readChatMessage(int& inputLines)
 {
     std::string message;
+
     std::getline(std::cin, message);
+
+    int terminalWidth = getTerminalWidth();
+
+    int width = displayWidth(message);
+
+    if (width == 0)
+    {
+        inputLines = 1;
+    }
+    else
+    {
+        inputLines = (width + terminalWidth - 1) / terminalWidth;
+    }
+
     return message;
 }
-void eraseEchoedInput()                                               
-{                                                                       
-   // \x1b[1A 回到刚回显的那行                          
-   // \r       回到行首                                                  
-   // \x1b[2K  清除整行                                                  
-    std::cout << "\x1b[1A" << "\r" << "\x1b[2K" << std::flush;            
-}             
+void eraseEchoedInput(int inputLines)
+{
+    if (inputLines <= 0)
+        return;
+    for (int i = 0; i < inputLines; ++i)
+    {
+        std::cout << "\x1b[1A";
+    }
+    for (int i = 0; i < inputLines; ++i)
+    {
+        std::cout << "\r"
+                  << "\x1b[2K";
+
+        if (i + 1 < inputLines)
+        {
+            std::cout << "\x1b[1B";
+        }
+    }
+
+    std::cout << "\r" << std::flush;
+}
 void privateChatLoop(Client& client,int friendid,const std::string& friendname)
 {
     client.enterPrivateChat(friendid,friendname);
@@ -668,8 +758,8 @@ void privateChatLoop(Client& client,int friendid,const std::string& friendname)
    
     while(true)
     {
-        
-       std::string text = readChatMessage();
+        int inputLines=0;
+       std::string text = readChatMessage(inputLines);
         if(text.empty())
         {
            continue;
@@ -680,7 +770,7 @@ void privateChatLoop(Client& client,int friendid,const std::string& friendname)
             std::cout << "已退出聊天\n";
             return;
         }
-         eraseEchoedInput();   
+         eraseEchoedInput(inputLines);   
         client.privateChat(friendid, text);
     }
 }
@@ -813,7 +903,8 @@ void groupChatLoop(Client& client, int groupid, const std::string& groupname)
     std::cout << "\n========================================\n";
     while(true)
     {
-        std::string text = readChatMessage();
+        int inputLines=0;
+        std::string text = readChatMessage(inputLines);
         if(text.empty())
         {
             continue;
@@ -824,7 +915,7 @@ void groupChatLoop(Client& client, int groupid, const std::string& groupname)
             std::cout << "已退出群聊\n";
             return;
         }
-         eraseEchoedInput(); 
+         eraseEchoedInput(inputLines); 
         client.groupChat(groupid, text);
     }
 }

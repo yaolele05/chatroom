@@ -26,6 +26,10 @@ MysqlResult::~MysqlResult()
         mysql_free_result(metadata_);
         metadata_=nullptr;
     }
+     if(stmt_)
+     {
+        mysql_stmt_free_result(stmt_);
+     }
 }
 bool MysqlResult::isStringType(enum_field_types type) const
 {

@@ -33,6 +33,8 @@ void Client::sendHeartbeat()
     msg.setType(Messagetype::HeartBeat);
     connection_->send(msg);
 }
+
+
 void Client::handleHeartbeat(const Message& msg)
 {
    //std::cout<<"heartbeat response"<<std::endl;   
@@ -885,7 +887,7 @@ void Client::onMessage(const Message& msg)
           mode = chatMode_;                                              
          chatId = currentChatId_;                                       
      }                                                                  
-      if(mode == ChatMode::Private && chatId == friendid)                
+      if(inChat())                
         break;      
         
         
@@ -901,6 +903,9 @@ void Client::onMessage(const Message& msg)
         if(unreadc<=0)
        break;
        
+        if(inChat())                
+        break;      
+        
          std::cout << "\n[通知] 你有 " << unreadc << " 条来自群聊 "<< groupname  << " 的未读消息\n";
          break;
     }
@@ -1039,7 +1044,7 @@ void Client::handlePrivateChat(const Message& msg)
     }
    std::string content=payload.value("content","");
     bool unread =payload.value("unread", false);
-
+    bool realtime = payload.value("realtime", false);
     ChatMode mode;
     uint32_t chatId;
     std::string peerName;
@@ -1083,12 +1088,14 @@ void Client::handlePrivateChat(const Message& msg)
 
        return;
     }
-    if(!unread)
+    if(realtime)
     {
-        return;
+        std::string senderName = payload.value("senderName", "用户" + std::to_string(senderId));
+     printNotification("收到 " + senderName + " 的新消息");
     }
-   
+      
 
+    return;
 }
 void Client::handleGroupChat(const Message& msg)
 {

@@ -149,7 +149,7 @@ void FileTransfer::sendChunks(uint64_t fileId,uint64_t offset)
         std::cout<<"[FileTransfer] file upload finished"<<"fileId="<<task.fileId<<std::endl;
         return;
     }
-    size_t CHUNK_SIZE = 128 * 1024;
+    size_t CHUNK_SIZE = 1024 * 1024;
     std::vector<char> buffer(CHUNK_SIZE);
     task.file.clear();
     task.file.seekg(static_cast<std::streamoff>(offset),std::ios::beg);////seekg?
@@ -232,7 +232,7 @@ void FileTransfer::handleFileChunk(const Message& msg)
       }
      
        task.received +=bytes.size();
-        task.file.flush();
+      //  task.file.flush();
          received = task.received;
     }
        Message ack; 

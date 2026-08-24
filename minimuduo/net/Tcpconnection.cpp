@@ -221,9 +221,7 @@ void TcpConnection::shutdown()
 
 void TcpConnection::forceClose()
 {
-    std::cout << "forceClose thread:"
-          << std::this_thread::get_id()
-          << std::endl;
+    
     auto self(shared_from_this());
     loop_->runInLoop([self]()
     {

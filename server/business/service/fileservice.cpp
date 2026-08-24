@@ -145,6 +145,8 @@ void FileService::fileStart(const Message& msg,Session*se)
     task->stream.open(path,std::ios::binary |std::ios::in |std::ios::out |std::ios::trunc);
     if(!task->stream)
      {
+       model.remove(file.id());
+
        Message reply;
         reply.setType(Messagetype::Error);
         reply.setSequence(msg.sequence());
@@ -414,7 +416,10 @@ void FileService::fileFinish(const Message& msg,Session* se)
 
      FileModel model;
     std::int64_t fileId=payload.at("fileId").get<int64_t>();
+    std::cout << "[DEBUG] 1 before findById" << std::endl;
      auto file= model.findById(fileId);
+
+   std::cout << "[DEBUG] 2 after findById" << std::endl;
      if(!file)
      {
         Message reply;
@@ -479,7 +484,11 @@ void FileService::fileFinish(const Message& msg,Session* se)
       se->send(reply);
      return;
     }
+
+    std::cout << "[DEBUG] 3 before completeFile" << std::endl;
+
      bool ok=model.completeFile(fileId);
+     std::cout << "[DEBUG] 4 after completeFile" << std::endl;
      if(!ok)
      {
          Message reply;
@@ -494,38 +503,38 @@ void FileService::fileFinish(const Message& msg,Session* se)
     receiveTasks_.erase(it);
 
      FileReceiverModel receiverModel;
-
+std::cout << "[DEBUG] 5 before findByFileId" << std::endl;
    auto receivers = receiverModel.findByFileId(fileId);
- // std::cout<< "[FileService] file receivers=" << receivers.size()<< " fileId=" << fileId<< std::endl;
+   std::cout << "[DEBUG] 6 after findByFileId" << std::endl;
+ 
   for(auto& receiverInfo : receivers)
   {
     int receiverId = receiverInfo.userId();
     int status = receiverInfo.status();
 
-  //  std::cout<< "[FileService] receiver"<< " fileId=" << fileId << " receiverId=" << receiverId << " status=" << status<< std::endl;
+ 
     if(status == FileReceiver::Finished)
     {
-       // std::cout<< "[FileService] receiver already finished"<< " fileId=" << fileId<< " receiverId=" << receiverId<< std::endl;
+      
 
         continue;
     }
 
     if(status == FileReceiver::Downloading)
     {
-        //std::cout<< "[FileService] receiver already downloading"<< " fileId=" << fileId<< " receiverId=" << receiverId << std::endl;
+       
         continue;
     }  
     if(status != FileReceiver::Waiting)
     {
-        //std::cout<< "[FileService] unknown receiver status"<< " fileId=" << fileId<< " receiverId=" << receiverId<< " status=" << status<< std::endl;
-        continue;
+        
     }
     auto receiver =SessionManager::instance().getSession(receiverId);
 
     if(!receiver)
     {
       
-       // std::cout<< "[FileService] receiver offline"<< " fileId=" << fileId<< " receiverId=" << receiverId  << " keep Waiting"<< std::endl;
+     
         continue;
     }
      
@@ -539,7 +548,7 @@ void FileService::fileFinish(const Message& msg,Session* se)
     notify.payload()["sha256"]=file->fileSha256();
     notify.payload()["groupId"]=file->groupId();
     receiver->send(notify);
-   // std::cout<<"[FileService]send file notify"<<"fileId:"<<fileId<<"receiverId:"<<receiverId<<std::endl;
+  
    }
 
     Message ack;
@@ -599,13 +608,11 @@ void FileService::sendFileToReceiver(const FileInfo& file,const std::shared_ptr<
 
     if(!inserted)
     {
-      //  std::cout<< "[FileService] insert send task failed"<< " fileId=" << file.id()<< " receiverId=" << receiverId<< std::endl;
+      
         return;
     }
 
     SendTask& sendTask = *it->second;
-
-   // std::cout<< "[FileService] create send task" << " fileId=" << file.id()<< " receiverId=" << receiverId<< " size=" << file.fileSize()<< std::endl;
 
     sendNextChunk(sendTask);
    
@@ -792,7 +799,7 @@ void FileService::sendNextChunk(SendTask& task)
 
         return;
     }
-    size_t CHUNK_SIZE = 512 * 1024;
+    size_t CHUNK_SIZE = 1024 * 1024;
     std::vector<char> buffer(CHUNK_SIZE);
 
     task.stream.clear();
@@ -984,8 +991,5 @@ void FileService::downloadRequest(const Message& msg,Session*se)
     ack.payload()["fileId"] =fileId;
     ack.payload()["offset"] =0;
     ack.payload()["message"] ="download started";
-
     se->send(ack);
-
-
 }

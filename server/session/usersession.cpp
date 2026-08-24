@@ -66,6 +66,7 @@ void UserSession:: setUsername(const std::string& username)
 
 void UserSession::updateHeartbeat()
 {
+    std::lock_guard<std::mutex> lock(activityMutex_);
     lastHeartbeat_=std::chrono::steady_clock::now();
 }
 void UserSession::setClientAddress(const std::string& ip,uint16_t port)
@@ -83,10 +84,12 @@ const std::string& UserSession::clientIp() const
 }
 std::chrono::steady_clock::time_point UserSession::lastHeartbeat() const
 {
+    std::lock_guard<std::mutex> lock(activityMutex_);
     return lastHeartbeat_;
 }
 bool UserSession::heartbeatTimeout(std::chrono::seconds timeout) const
 {
+    std::lock_guard<std::mutex> lock(activityMutex_);
     auto now = std::chrono::steady_clock::now();
     return now - lastHeartbeat_ >= timeout;
 }

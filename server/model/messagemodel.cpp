@@ -23,7 +23,9 @@ bool MessageModel::insert(ChatMessage& message)
     {
         return false;
     }
+  bool ok=false;
 
+  {
     auto stmt=conn->prepared(R"(INSERT INTO message(
         sender_id,receiver_id,group_id,type,content,create_time)VALUES(?,?,?,?,?,?)
     )");
@@ -40,14 +42,15 @@ bool MessageModel::insert(ChatMessage& message)
     stmt->bind(4, message.content());
     stmt->bind(5, std::chrono::duration_cast<std::chrono::seconds>(message.sendTime().time_since_epoch()).count());
 
-    bool ok=stmt->execute();
+     ok=stmt->execute();
 
-    if(!ok)
+    if(ok)
     {
-     MysqlPool::instance().releaseConnection(conn);
-        return ok;
+        message.setId(static_cast<std::int64_t>(conn->lastInsertId()));
+   
+       
     }
-     message.setId(static_cast<std::int64_t>(conn->lastInsertId()));
+   }
     MysqlPool::instance().releaseConnection(conn);
     return ok;
 
@@ -59,18 +62,10 @@ std::optional<ChatMessage>MessageModel::findById(std::int64_t id)
     {
         return std::nullopt;
     }
-
-    auto stmt=conn->prepared("SELECT "
-        "id,"
-        "sender_id,"
-        "receiver_id,"
-        "group_id,"
-        "type,"
-        "content,"
-        "create_time "
-        "FROM message "
-        "WHERE id=?"
-    );
+  std::optional<ChatMessage> resultMessage;
+   { auto stmt=conn->prepared("SELECT "   "id,"   "sender_id,"   "receiver_id,"
+        "group_id,"   "type,"   "content,"      "create_time "
+        "FROM message "   "WHERE id=?" );
     if(!stmt)
     {
     MysqlPool::instance().releaseConnection(conn);
@@ -82,12 +77,12 @@ std::optional<ChatMessage>MessageModel::findById(std::int64_t id)
     auto result=stmt->query();
     if(result.fetch())
     {
-        auto message=makeMessage(result);
-        MysqlPool::instance().releaseConnection(conn);
-        return message;
+        resultMessage=makeMessage(result);
+   
     }
+  }
     MysqlPool::instance().releaseConnection(conn);
-    return std::nullopt;
+    return resultMessage;
 }
 std::vector<ChatMessage> MessageModel::findPriHistory(int userid, int peerid,size_t limit,size_t offset)
 {
@@ -96,19 +91,13 @@ std::vector<ChatMessage> MessageModel::findPriHistory(int userid, int peerid,siz
     {
         return {};
     }
-
-    auto stmt=conn->prepared("SELECT "
-        "id,"
-        "sender_id,"
-        "receiver_id,"
-        "group_id,"
-        "type,"
-        "content,"
-        "create_time "
+     std::vector<ChatMessage> messages;
+     {
+    auto stmt=conn->prepared("SELECT "  "id,"  "sender_id,"  "receiver_id,"   "group_id,"
+        "type,"    "content,"   "create_time "
         "FROM message "
         "WHERE (sender_id=? AND receiver_id=?) OR (sender_id=? AND receiver_id=?) "
-        "ORDER BY create_time DESC "
-        "LIMIT ? OFFSET ?"
+        "ORDER BY create_time DESC "   "LIMIT ? OFFSET ?"
     );
     if(!stmt)
     {
@@ -130,6 +119,7 @@ std::vector<ChatMessage> MessageModel::findPriHistory(int userid, int peerid,siz
         auto message=makeMessage(result);
         messages.push_back(message);
     }
+  }
     MysqlPool::instance().releaseConnection(conn);
     return messages;
 }
@@ -141,19 +131,9 @@ std::vector<ChatMessage> MessageModel::findGroupHistory(int groupid,size_t limit
         return {};
     }
 
-    auto stmt=conn->prepare("SELECT "
-        "id,"
-       "sender_id,"
-         "receiver_id,"
-        "group_id,"
-        "type,"
-        "content,"
-        "create_time "
-        "FROM message "
-        "WHERE group_id=? "
-        "ORDER BY create_time DESC "
-        "LIMIT ? OFFSET ?"
-    );
+    auto stmt=conn->prepare("SELECT "  "id,"  "sender_id,"   "receiver_id,"  "group_id,"  "type,"
+       "content,"    "create_time "   "FROM message "     "WHERE group_id=? "  "ORDER BY create_time DESC "
+        "LIMIT ? OFFSET ?");
 
     if(!stmt)
     {
@@ -182,20 +162,12 @@ std::vector<ChatMessage> MessageModel::findUserGroupHistory(int userid,int group
     {
         return {};
     }
+     std::vector<ChatMessage> messages;
 
-    auto stmt=conn->prepare("SELECT "
-        "id,"
-       "sender_id,"
-         "receiver_id,"
-        "group_id,"
-        "type,"
-        "content,"
-        "create_time "
-        "FROM message "
-        "WHERE group_id=? AND sender_id=? "
-        "ORDER BY create_time DESC "
-        "LIMIT ? OFFSET ?"
-    );
+     {
+    auto stmt=conn->prepare("SELECT "  "id,"   "sender_id,"  "receiver_id,"   "group_id,"
+   "type,"   "content,"  "create_time "
+  "FROM message "  "WHERE group_id=? AND sender_id=? "   "ORDER BY create_time DESC "   "LIMIT ? OFFSET ?");
 
     if(!stmt)
     {
@@ -209,12 +181,12 @@ std::vector<ChatMessage> MessageModel::findUserGroupHistory(int userid,int group
     stmt->bind(3,static_cast<int>(offset));
 
     auto result=stmt->query();
-    std::vector<ChatMessage> messages;
     while(result.fetch())
     {
         auto message=makeMessage(result);
         messages.push_back(message);
     }
+   }
     MysqlPool::instance().releaseConnection(conn);
     return messages;
 }

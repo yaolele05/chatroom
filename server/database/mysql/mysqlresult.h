@@ -14,8 +14,7 @@ public:
     ~MysqlResult();
     MysqlResult(const MysqlResult&) = delete;
     MysqlResult& operator=(const MysqlResult&) = delete;
-    MysqlResult(MysqlResult&&) noexcept;
-    MysqlResult& operator=(MysqlResult&&) noexcept;
+
     bool fetch();
     // 行数
     size_t rowCount() const;

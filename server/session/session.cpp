@@ -35,9 +35,13 @@ void Session::close()
 }
 bool Session::connected() const
 {
-    return conn_!=nullptr;
+     return connectionAlive_.load();
 }
 const TcpConnectionptr& Session:: connection() const
 {
     return conn_;
+}
+void Session::markDisconnected()
+{
+    connectionAlive_.store(false);
 }

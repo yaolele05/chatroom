@@ -128,9 +128,9 @@ void ClientConnection::handleRead()
     if(n>0)
     {
     
-         auto data=inputBuffer_->peek();
+        /* auto data=inputBuffer_->peek();
         uint32_t len;
-       memcpy(&len,data,4);
+       memcpy(&len,data,4);*/
         while(true)
         {
         std::string json;

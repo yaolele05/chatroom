@@ -3,6 +3,7 @@
 #include "../../minimuduo/net/callback.h"
 #include <nlohmann/json.hpp>
 #include "../../common/protocol/message.h"
+#include <atomic>
 using json=nlohmann::json;
 class Session
 {
@@ -25,8 +26,13 @@ class Session
    void close();
    bool connected() const;
    const TcpConnectionptr& connection() const;///
+   
+
+    void markDisconnected();
 
    private:
    TcpConnectionptr conn_;
+    
+    std::atomic<bool>  connectionAlive_{true};//duoge线程访问
 
 };

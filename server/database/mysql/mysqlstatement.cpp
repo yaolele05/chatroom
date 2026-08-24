@@ -123,7 +123,11 @@ bool MysqlStatement::bind(int index, uint64_t value)
 }
 bool MysqlStatement::execute()
 {
-
+    if(!stmt_)
+    {
+        std::cout<<"execute erro,statement is null"<<std::endl;
+        return false;
+    }
     if(!binds_.empty())
     {
         if(mysql_stmt_bind_param(stmt_,binds_.data())!=0)

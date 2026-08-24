@@ -93,6 +93,8 @@ void ChatService::PrivateChat(const Message& message,Session* session)
    reply.setTimestamp(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count());
 
    reply.payload()["content"]=content;
+   reply.payload()["realtime"] = true;
+reply.payload()["unread"] = true;
 
    auto receiver =SessionManager::instance().getSession(receiverId);
   
@@ -107,8 +109,8 @@ void ChatService::PrivateChat(const Message& message,Session* session)
       //std::cout<< "offline insert="<< ok<< " messageId="<< chat.id()<< std::endl;
    if(receiver)
    {
-      receiver->send(reply);
-      OfflineService::instance().sendPrivateUnreadNotify(receiverId,receiver.get());
+     receiver->send(reply);
+     // OfflineService::instance().sendPrivateUnreadNotify(receiverId,receiver.get());
     
    }
  
