@@ -134,7 +134,7 @@ std::string readPassword()
  } 
 int main(int argc, char* argv[])
 {
-
+std::cout << "MAIN PID = " << getpid() << std::endl;
     EventLoop loop;
     Client client(&loop);
     std::string serverIp;
@@ -158,9 +158,9 @@ int main(int argc, char* argv[])
         return -1;
     }
     std:: thread menuThread([&client](){loginMenu(client);});
-   // std::cout<<"before loop"<<std::endl;
+   
     loop.loop();
-   // std::cout<<"after loop"<<std::endl;
+   
     menuThread.join();
    
     return 0;

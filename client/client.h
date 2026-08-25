@@ -149,7 +149,7 @@ class Client
     void handleHeartbeat(const Message& msg);
     void handleRegister(const Message& msg);
     void handleHistory(const Message& msg);
-   // void handlerequestDownload(int64_t fileId);
+   
     void handleOfflineFileNotify(const Message& msg);
       void onConnectionClosed(); 
    private:

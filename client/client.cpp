@@ -9,6 +9,8 @@
 #include <iostream>
 #include <string>
 
+#include <unistd.h>
+
 Client::Client(EventLoop* loop):loop_(loop),tcpClient_(std::make_unique<TcpClient>(loop))
 {
    loop_->setTimerCallback([this]()
@@ -446,6 +448,12 @@ void Client::onConnectionClosed()
       login_ = false;               // 让 chatMenu 的 while(client.isLogin()) 退出
 
       std::cout << "\n[提示] 服务器已关闭连接\n" << std::endl;
+      loop_->quit();
+     
+        std::cout.flush();
+
+       ::_exit(0);
+   
   }
 
 void Client::quit()
