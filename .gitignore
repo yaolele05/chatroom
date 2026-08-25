@@ -69,3 +69,4 @@ server/business/service/emailservice.h
 # SSL 私钥
 # =========================
 *.key
+build/
