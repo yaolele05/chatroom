@@ -69,7 +69,7 @@ void ChatService::PrivateChat(const Message& message,Session* session)
    }
 
    std::string content=payload.at("content").get<std::string>();
-   //std::cout<<"PrivateChat:"<<"sender="<<sendId<<" receiver="<<receiverId<<" content="<<content<<std::endl;
+   
    
    ChatMessage chat;
    chat.setSendId(sendId);
@@ -106,14 +106,11 @@ reply.payload()["unread"] = true;
       offline.setCreateTime(std::chrono::system_clock::now());
 
       bool ok = offlineModel.insert(offline);
-      //std::cout<< "offline insert="<< ok<< " messageId="<< chat.id()<< std::endl;
+     
    if(receiver)
    {
-     receiver->send(reply);
-     // OfflineService::instance().sendPrivateUnreadNotify(receiverId,receiver.get());
-    
+     receiver->send(reply); 
    }
- 
 
    Message ack;
    ack.setType(Messagetype::MessageAck);

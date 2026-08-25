@@ -133,42 +133,6 @@ bool RedisClient::exists(const std::string& key)
    return result;
   
 }
-bool RedisClient::expire(const std::string&key, int second)
-{
-  if(!connected())
-  return false;
-  redisReply* reply=static_cast<redisReply*>(redisCommand(context_,"EXPIRE %s %d",key.c_str(),second));
-  if(reply==nullptr)
-  return false;
-
-  bool success=reply->type==REDIS_REPLY_INTEGER&& reply->integer==1;
-  freeReplyObject(reply);
-  return success;
-
-}
-RedisResult RedisClient::command(const std::string& cmd)
-{
-    if(!connected())
-    {
-        return RedisResult(nullptr);
-    }
-    redisReply* reply=static_cast<redisReply*>(redisCommand(context_,"%s",cmd.c_str()));
-   
-    return RedisResult(reply);
-}
-RedisResult RedisClient::command(const char* fmt,...)
-{
-    if(!connected())
-    {
-        return RedisResult(nullptr);
-    }
-    va_list args;
-    va_start(args,fmt);
-    redisReply* reply=static_cast<redisReply*>(redisCommand(context_,fmt,args));
-    va_end(args);
-
-    return RedisResult(reply);
-}
 bool RedisClient::setUserOnline(int userid)
 {
     return set("user:online:"+std::to_string(userid),"1");
@@ -184,57 +148,6 @@ bool RedisClient::isUserOnline(int userid)
     auto value=get("user:online:"+std::to_string(userid));
 
     return value.has_value();
-}
-bool RedisClient::saveToken(int userid,const std::string& token )
-{
-   return set("token:"+std::to_string(userid),token);
-}
-std::optional<std::string> RedisClient::getToken(int userid)
-{
-    return get("token:"+std::to_string(userid));
-}
-bool RedisClient::deleteToken(int userid)
-{
-    return del("user:token:" + std::to_string(userid));
-}
-bool RedisClient::refreshHeartbeat(int userid)
-{
-    return expire("user:online:" + std::to_string(userid), 60);
-}
-bool RedisClient::publish(const std::string& channel,const std::string& message)
-{
-    if(!connected())
-    {
-        return false; 
-    }
-
-    RedisResult result=command("PUBLISH %s %s",channel.c_str(),message.c_str());
-
-    if(!result.valid())
-    {
-        return false;
-    }
-
-    return true;
-}
-bool RedisClient::subscribe(const std::string& channel)
-{
-    if(!connected())
-    {
-     return false;
-    }
-    RedisResult result=command("SUBSCRIBE: %s",channel.c_str());
-    return result.valid();
-}
-bool RedisClient::unsubscribe(const std::string& channel)
-{
-    if(!connected())
-    {
-     return false;
-    }
-    RedisResult result=command("UNSUBSCRIBE: %s",channel.c_str());
-    
-    return result.valid();
 }
 bool RedisClient::blockFriend(uint32_t userId,uint32_t friendId)
 {

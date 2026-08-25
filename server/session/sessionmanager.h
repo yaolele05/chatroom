@@ -15,14 +15,13 @@ class SessionManager
     bool removeSession(TcpConnection* conn);
 
     UserSessionPtr getSession(const int userid);
-    UserSessionPtr getSession(const std::string& username);
+
     UserSessionPtr getSession( TcpConnection* conn);
     bool contains(int userid) const;
-    bool contains(const std::string&);
-    size_t onlineCount() const;
+    
+   
     std::vector<UserSessionPtr> onlineUsers() const;///
-    void clear();
-    void foreachSession(const std::function<void(UserSessionPtr)>& cb);///////容易死锁
+   
      void bindUser(UserSession* session);
       void unbindUser(UserSession* session);
     private:

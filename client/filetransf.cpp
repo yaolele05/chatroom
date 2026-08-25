@@ -5,7 +5,6 @@
 #include <iostream>
 #include <atomic>
 #include "../common/security/crypto/sha256.h"
-#include "../common/security/crypto/base64.h"
 #include <algorithm>//removePendingReceiveFile(int64_t fileId)
 FileTransfer::FileTransfer(std::shared_ptr<ClientConnection> conn):connection_(std::move(conn))
 {

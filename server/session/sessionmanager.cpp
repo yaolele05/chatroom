@@ -50,15 +50,7 @@ SessionManager::UserSessionPtr SessionManager::getSession(const int userid)
 
      return it->second;
 }
-SessionManager::UserSessionPtr SessionManager::getSession(const std::string& username)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    auto it =usernamesessions_.find(username);
-    if(it==usernamesessions_.end())
-    return nullptr;
 
-    return it->second;
-}
 SessionManager::UserSessionPtr SessionManager::getSession( TcpConnection* conn)
 {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -72,16 +64,6 @@ bool SessionManager:: contains(int userid) const
 {
     std::lock_guard<std::mutex> lock(mutex_);
     return useridsessions_.find(userid)!=useridsessions_.end();
-}
-bool SessionManager::contains(const std::string& username)
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return usernamesessions_.find(username)!=usernamesessions_.end();
-}
-size_t SessionManager:: onlineCount() const
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    return useridsessions_.size();
 }
 std::vector<SessionManager::UserSessionPtr> SessionManager::onlineUsers() const
 {
@@ -97,22 +79,7 @@ std::vector<SessionManager::UserSessionPtr> SessionManager::onlineUsers() const
 
     return users;
 }
-void SessionManager::clear()
-{
-    std::lock_guard<std::mutex> lock(mutex_);
-    useridsessions_.clear();
-    usernamesessions_.clear();
-    connectionsessions_.clear();
-}
-void SessionManager::foreachSession(const std::function<void(SessionManager::UserSessionPtr)>& cb)
-{
-   std::lock_guard<std::mutex> lock(mutex_);
-   
-    for(auto& [id,session] : useridsessions_)
-  {
-    cb(session);
-  }
-}
+
 void SessionManager::bindUser(UserSession* session)
 {
     if(session==nullptr)

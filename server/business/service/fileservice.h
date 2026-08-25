@@ -1,5 +1,4 @@
 #pragma once
-#include "../../../common/protocol/protocol.h"
 #include "../../session/usersession.h"
 #include "../../model/filemodel.h"
 #include <unordered_map>

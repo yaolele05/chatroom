@@ -49,9 +49,7 @@ int displayWidth(const std::string& text)
     while (remaining > 0)
     {
         wchar_t wc;
-
         size_t len = mbrtowc(&wc, p, remaining, &state);
-
         if (len == static_cast<size_t>(-1) ||
             len == static_cast<size_t>(-2))
         {
@@ -59,11 +57,9 @@ int displayWidth(const std::string& text)
             ++width;
             ++p;
             --remaining;
-
             state = mbstate_t{};
             continue;
         }
-
         if (len == 0)
             break;
 
@@ -71,11 +67,9 @@ int displayWidth(const std::string& text)
 
         if (w > 0)
             width += w;
-
         p += len;
         remaining -= len;
     }
-
     return width;
 }
 #include <sys/ioctl.h>
