@@ -608,12 +608,7 @@ bool GroupModel::rejectJoinRequest(std::int64_t requestId,int operatorId)
         MysqlPool::instance().releaseConnection(conn);
         return false;
     }
-    auto roleStmt = conn->prepare(R"(
-        SELECT role
-        FROM chatgroup_member
-        WHERE group_id = ?
-          AND user_id = ?
-    )");
+    auto roleStmt = conn->prepare(R"(  SELECT role  FROM chatgroup_member   WHERE group_id = ?    AND user_id = ?)");
 
     if(!roleStmt)
     {
@@ -702,12 +697,8 @@ bool GroupModel::setGroupMemberRole(std::int64_t groupid,int userid, GroupRole r
         return false;
     }
 
-    auto updateStmt = conn->prepare(R"(
-        UPDATE chatgroup_member
-        SET role = ?
-        WHERE group_id = ?
-          AND user_id = ?
-    )");
+    auto updateStmt = conn->prepare(R"(  UPDATE chatgroup_member
+        SET role = ?  WHERE group_id = ?    AND user_id = ?  )");
     if(!updateStmt)
     {
         MysqlPool::instance().releaseConnection(conn);

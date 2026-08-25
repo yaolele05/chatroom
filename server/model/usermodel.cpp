@@ -160,31 +160,7 @@ std::optional<User> UserModel::findByName(const std::string& username)
     MysqlPool::instance().releaseConnection(conn);
     return std::nullopt;
 }
-std::vector<User> UserModel::findAll()
-{
-    std::vector<User> users;
-     auto conn=MysqlPool::instance().getConnection();
-    if(!conn)
-    {
-        return users;
-    }
-    auto stmt=conn->prepare("SELECT "  "id,"  "username,"   "password_hash,"   "email," "nickname,"   "avatar,"  "signature "  "FROM users " );
-    if(!stmt)
-    {
-        MysqlPool::instance().releaseConnection(conn);
-        return users;
-    }
-    auto result=stmt->query();
-    while(result.fetch())
-    {
-        users.push_back(makeUser(result));
-    }
 
-    MysqlPool::instance().releaseConnection(conn);
-
-    return users;
-
-}
  std::optional<User> UserModel::findByEmail(const std::string& email)
 {
 
@@ -215,25 +191,6 @@ std::vector<User> UserModel::findAll()
 
     MysqlPool::instance().releaseConnection(conn);
     return std::nullopt;
-}
-bool UserModel::updatePassword(int userid,const std::string& passwordHash)
-{
-    auto conn = MysqlPool::instance().getConnection();
-    if(!conn)
-        return false;
-    auto stmt = conn->prepare(  "UPDATE users "  "SET password_hash=? "  "WHERE id=?"    );
-    if(!stmt)
-    {
-        MysqlPool::instance().releaseConnection(conn);
-        return false;
-    }
-    stmt->bind(0, passwordHash);
-    stmt->bind(1, userid);
-    bool ok = stmt->execute();
-
-    MysqlPool::instance().releaseConnection(conn);
-
-    return ok;
 }
 bool UserModel::deleteAccount(int userid)
 {

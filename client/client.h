@@ -87,18 +87,15 @@ class Client
 
     bool inChat() const;
     ChatMode chatMode() const;
-    uint32_t currentChatId() const;
+    
   
     void PrivateChatRead(uint32_t friendid);
     void clearLocalUnreadCount(uint32_t friendid);
-   void requestPrivateUnread(uint32_t friendid);
+  
      void blockFriend(uint32_t friendId);
     void unblockFriend(uint32_t friendId);
     bool isFriendBlock(uint32_t friendId) const;
-    const std::unordered_set<uint32_t>& blockedFriends() const
-    {
-        return blockedFriends_;
-    }
+   
     bool isFriendBlockedEitherWay(uint32_t friendId) const;
     void waitFriendList();
  
@@ -152,7 +149,7 @@ class Client
     void handleHeartbeat(const Message& msg);
     void handleRegister(const Message& msg);
     void handleHistory(const Message& msg);
-    void handlerequestDownload(int64_t fileId);
+   // void handlerequestDownload(int64_t fileId);
     void handleOfflineFileNotify(const Message& msg);
       void onConnectionClosed(); 
    private:

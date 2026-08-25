@@ -73,7 +73,7 @@ class FileTransfer
     bool sendPrivateFile(uint32_t userId,const std::string& filename);
     bool sendGroupFile(uint32_t groupId,const std::string& filename);
     void sendChunks(uint64_t fileId,uint64_t offset);
-    bool sendImage(uint32_t receiverId,const std::string& filename);
+   
     void handleFileChunk(const Message& msg);
     void handleFileFinish(const Message& msg);
     void handleAck(const Message& msg);

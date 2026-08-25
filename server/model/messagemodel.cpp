@@ -155,38 +155,3 @@ std::vector<ChatMessage> MessageModel::findGroupHistory(int groupid,size_t limit
     MysqlPool::instance().releaseConnection(conn);
     return messages;
 }
-std::vector<ChatMessage> MessageModel::findUserGroupHistory(int userid,int groupid,size_t limit,size_t offset)
-{
-    auto conn=MysqlPool::instance().getConnection();
-    if(!conn)
-    {
-        return {};
-    }
-     std::vector<ChatMessage> messages;
-
-     {
-    auto stmt=conn->prepare("SELECT "  "id,"   "sender_id,"  "receiver_id,"   "group_id,"
-   "type,"   "content,"  "create_time "
-  "FROM message "  "WHERE group_id=? AND sender_id=? "   "ORDER BY create_time DESC "   "LIMIT ? OFFSET ?");
-
-    if(!stmt)
-    {
-        MysqlPool::instance().releaseConnection(conn);
-        return {};
-    }
-
-    stmt->bind(0,groupid);
-    stmt->bind(1,userid);
-    stmt->bind(2,static_cast<int>(limit));
-    stmt->bind(3,static_cast<int>(offset));
-
-    auto result=stmt->query();
-    while(result.fetch())
-    {
-        auto message=makeMessage(result);
-        messages.push_back(message);
-    }
-   }
-    MysqlPool::instance().releaseConnection(conn);
-    return messages;
-}

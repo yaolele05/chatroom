@@ -82,10 +82,7 @@ void setCreateTime(const std::chrono::system_clock::time_point& time)
     {
         createTime_ = time;
     }
-std::chrono::system_clock::time_point updateTime() const
-    {
-        return updateTime_;
-    }
+
 void setUpdateTime(const std::chrono::system_clock::time_point& time)
  {
         updateTime_ = time;

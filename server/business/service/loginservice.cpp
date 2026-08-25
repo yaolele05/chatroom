@@ -20,7 +20,7 @@ LoginService& LoginService::instance()
 }
 void LoginService::registerHandle()
 {
-    //std::cout << "register login handler" << std::endl;
+    
     auto& dispatcher=BusinessDispatcher::instance();
     dispatcher.registerHandler(Messagetype::Register,[](const Message& message,Session* session)
 {
@@ -503,7 +503,7 @@ void LoginService::sendRegisterCode(const Message& msg,Session* se)
         return;
 
     }
-    //
+  
        
     bool sent=EmailService::instance().send(email,"ChatRoom注册验证码","你的ChatRoom注册验证码是:"+code+"\r\n验证码80秒内有效，请勿泄漏给他人。");
     

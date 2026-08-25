@@ -132,10 +132,6 @@ void ClientConnection::handleRead()
     ssize_t n=inputBuffer_->readFd(channel_.fd(),&savedErrno);
     if(n>0)
     {
-    
-        /* auto data=inputBuffer_->peek();
-        uint32_t len;
-       memcpy(&len,data,4);*/
         while(true)
         {
         std::string json;

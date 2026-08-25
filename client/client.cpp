@@ -1351,10 +1351,7 @@ void Client::handleFile(const Message& msg)
 {
     switch(msg.type())
     {
-        /*case Messagetype::FileStart:
-        fileTransfer_->handleFileStart(msg);
-
-        break;*/
+    
         case Messagetype::FileChunk:
           fileTransfer_->handleFileChunk(msg);
         break;
@@ -1594,12 +1591,6 @@ Client::ChatMode Client::chatMode() const
     return chatMode_;
 }
 
-uint32_t Client::currentChatId() const
-{
-    std::lock_guard<std::mutex> lock(chatMutex_);
-
-    return currentChatId_;
-}
 void Client::blockFriend(uint32_t friendId)
 {
     if(!connection_ ||! login_)

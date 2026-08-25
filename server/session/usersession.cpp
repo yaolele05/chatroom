@@ -47,10 +47,6 @@ bool UserSession::authenticated() const
     return  authenticated_; 
 }
 
-void UserSession::setOnline(bool online)
-{
-    online_=online;
-}
 void UserSession::setAuthenticated(bool v)
 {
     authenticated_=v;
@@ -81,11 +77,6 @@ uint16_t UserSession::clientPort() const
 const std::string& UserSession::clientIp() const
 {
     return clientIp_;
-}
-std::chrono::steady_clock::time_point UserSession::lastHeartbeat() const
-{
-    std::lock_guard<std::mutex> lock(activityMutex_);
-    return lastHeartbeat_;
 }
 bool UserSession::heartbeatTimeout(std::chrono::seconds timeout) const
 {

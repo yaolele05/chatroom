@@ -37,7 +37,7 @@ class FileService
     void downloadRequest(const Message& msg, Session* se);
 
     private:
-    std::atomic_uint64_t nextSendTaskId_{1};
+  
     FileService()=default;
 
     std::unordered_map<uint64_t, std::unordered_map<int, std::unique_ptr<SendTask>>>sendTasks_;

@@ -18,7 +18,7 @@ class Socket
     void setReusePort(bool on);
     void shutdownWrite();
      ssize_t write(const void* buf, size_t len);
-   // void setKeepAlive(bool on);////
+  
     private:
     int fd_;
     Socket(const Socket&)=delete;

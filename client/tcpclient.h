@@ -35,6 +35,5 @@ private:
      EventLoop* loop_;
      std::shared_ptr<ClientConnection>connection_;
      State state_;
-     std::string serverIp_;
-      uint16_t serverPort_;
+    
 };

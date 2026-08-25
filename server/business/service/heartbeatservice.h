@@ -9,7 +9,7 @@ class HeartbeatService
     static HeartbeatService& instance();
     static void registerHandler();
     void heartbeat(const Message& message,Session* session);
-   void checkTimeout(); 
+  
     private:
     HeartbeatService()=default;
     void updateSession(Session*session);

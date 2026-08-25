@@ -64,30 +64,6 @@ bool FileModel::insert(FileInfo& file)
 
     return ok;
 }
-bool FileModel::updatetransfSize(std::int64_t fileId,std::uint64_t size)
-{
-
-    auto conn =MysqlPool::instance().getConnection();
-    if(!conn)
-    {
-        return false;
-    }
-    auto stmt =
-    conn->prepared(R"(UPDATE file SET transferred_size=? WHERE id=?)");
-
-    if(!stmt)
-    {
-        MysqlPool::instance()
-        .releaseConnection(conn);
-
-        return false;
-    }
-    stmt->bind(0,size);
-    stmt->bind(1,fileId);
-    bool ok=stmt->execute();
-    MysqlPool::instance().releaseConnection(conn);
-    return ok;
-}
 bool FileModel::completeFile( std::int64_t fileId)
 {
 
@@ -121,36 +97,6 @@ std::optional<FileInfo> FileModel::findById(std::uint64_t fileid)
    }
 
    stmt->bind(0,fileid);
-
-   auto result=stmt->query();
-   std::optional<FileInfo> file;
-
-   if(result.fetch())
-   {
-    file=makeFileInfo(result);
-   }
-
-   MysqlPool::instance().releaseConnection(conn);
-
-   return file;
-
-}
-std::optional<FileInfo> FileModel::findBySha256(const std::string& sha256)
-{
-    auto conn=MysqlPool::instance().getConnection();
-    if(!conn)
-    return std::nullopt;
-
-    auto stmt=conn->prepared(R"(SELECT id,sender_id,receiver_id,group_id,file_name,file_path,file_size,file_sha256,transferred_size,completed,create_time
-        From file
-        WHERE file_sha256=?)");
-   if(!stmt)
-   {
-    MysqlPool::instance().releaseConnection(conn);
-    return std::nullopt;
-   }
-
-   stmt->bind(0,sha256);
 
    auto result=stmt->query();
    std::optional<FileInfo> file;

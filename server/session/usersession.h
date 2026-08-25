@@ -19,31 +19,18 @@ public:
     bool online() const;
     bool authenticated() const override;
     void setUserid(int id);
-    void setOnline(bool online);
+  
     void setAuthenticated(bool v);
     void setUsername(const std::string &username);
 
     void updateHeartbeat();
-    std::chrono::steady_clock::time_point lastHeartbeat() const;
+   
     bool heartbeatTimeout(std::chrono::seconds timeout) const; ///
 
     void setClientAddress(const std::string &ip, uint16_t port);
     uint16_t clientPort() const;
     const std::string &clientIp() const;
 
-    void enterGroup(uint32_t groupId)
-    {
-        currentGroupId_=groupId;
-    }
-    void leaveGroup()
-    {
-       currentGroupId_=0;
-    }
-        
-    uint32_t currentGroupId()
-    {
-            return currentGroupId_;
-    }
 
     private:
         int userid_{0};
