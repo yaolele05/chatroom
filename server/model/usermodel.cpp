@@ -42,11 +42,13 @@ bool UserModel::insert( User& user)
     if(!stmt->execute())
     {
 
+          MysqlPool::instance().releaseConnection(conn);  
         return false;
 
     }
 
     user.setId(static_cast<int>(conn->lastInsertId()));
+      MysqlPool::instance().releaseConnection(conn);  
     return true;
 }
 bool UserModel::update(const User& user)
