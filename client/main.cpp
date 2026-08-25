@@ -158,9 +158,9 @@ int main(int argc, char* argv[])
         return -1;
     }
     std:: thread menuThread([&client](){loginMenu(client);});
-    std::cout<<"before loop"<<std::endl;
+   // std::cout<<"before loop"<<std::endl;
     loop.loop();
-    std::cout<<"after loop"<<std::endl;
+   // std::cout<<"after loop"<<std::endl;
     menuThread.join();
    
     return 0;
