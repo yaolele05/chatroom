@@ -13,13 +13,12 @@
 * OpenSSL
 * libcurl
 * nlohmann/json
-* spdlog
 
 ## 项目简介
 
 ChatRoom 是一个基于 C++17 开发的客户端/服务器聊天室系统。
 
-项目采用自研的 MiniMuduo Reactor 网络库，基于 Linux `epoll` 实现网络事件驱动。
+项目自己实现 MiniMuduo Reactor 网络库，基于 Linux `epoll` 实现网络事件驱动。
 
 主要功能包括：
 
@@ -132,7 +131,7 @@ Service
 # 安装环境
 
 ## 安装编译工具
-
+总：
 ```bash
 sudo apt update
 
@@ -142,7 +141,13 @@ sudo apt install -y \
     g++ \
     cmake \
     git \
-    pkg-config
+ 、
+```
+```
+`sudo apt update
+sudo apt install build-essential cmake
+sudo apt install libssl-dev libcurl4-openssl-dev  libmysqlclient-dev libhiredis-dev
+sudo apt install nlohmann-json3-dev`
 ```
 
 检查 GCC：
@@ -167,8 +172,6 @@ cmake --version
 ChatRoom 使用 OpenSSL 实现：
 
 * SHA-256
-* SSL/TLS
-* 加密相关功能
 
 安装：
 
@@ -381,24 +384,6 @@ common/protocol/Jsoncodec.h
 
 ---
 
-# 安装 spdlog
-
-ChatRoom 使用 spdlog 进行日志输出。
-
-安装：
-
-```bash
-sudo apt install -y libspdlog-dev
-```
-
-检查：
-
-```bash
-dpkg -l | grep spdlog
-```
-
----
-
 # 邮件配置
 
 如果需要使用以下功能：
@@ -463,38 +448,6 @@ auth_code
 
 ---
 
-# SSL/TLS 配置
-
-项目 SSL/TLS 相关代码位于：
-
-```text
-common/security/ssl/
-```
-
-包括：
-
-```text
-sslcontext.cpp
-sslcontext.h
-sslmanager.cpp
-```
-
-证书目录：
-
-```text
-common/security/ssl/cert/
-```
-
-包含：
-
-```text
-server.crt
-server.key
-```
-
-如果更换服务器或部署到其他环境，需要根据实际部署环境配置对应的 SSL 证书和私钥。
-
----
 
 # 项目编译
 

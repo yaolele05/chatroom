@@ -45,7 +45,6 @@ int displayWidth(const std::string& text)
 
     const char* p = text.data();
     size_t remaining = text.size();
-
     while (remaining > 0)
     {
         wchar_t wc;
@@ -72,8 +71,7 @@ int displayWidth(const std::string& text)
     }
     return width;
 }
-#include <sys/ioctl.h>
-#include <unistd.h>
+
 
 int getTerminalWidth()
 {

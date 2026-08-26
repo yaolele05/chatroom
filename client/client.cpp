@@ -450,7 +450,7 @@ void Client::onConnectionClosed()
       std::cout << "\n[提示] 服务器已关闭连接\n" << std::endl;
       loop_->quit();
      
-        std::cout.flush();
+     std::cout.flush();
 
        ::_exit(0);
    
